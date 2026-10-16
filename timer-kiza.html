@@ -19,6 +19,7 @@
     --muted: #7083AA;
     --ok: #2BD67B;
     --danger: #FF4D6D;
+    --warn: #FF9F2E;
     --mono: "Consolas", "SFMono-Regular", "DejaVu Sans Mono", monospace;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -90,6 +91,8 @@
   .status.live { color: var(--text); }
   .status.live .dot { background: var(--accent-2); box-shadow: 0 0 8px var(--accent-2); }
   .status.err .dot { background: var(--danger); }
+  .status.ended { color: var(--warn); }
+  .status.ended .dot { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
 
   /* tarjetas */
   .block { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 16px; }
@@ -208,6 +211,10 @@
   .hrow.auto .hd { color: var(--ok); }
   .hrow.manual { border-left-color: var(--danger); }
   .hrow.manual .hd { color: var(--danger); }
+  .hrow.skip { border-left-color: var(--warn); background: rgba(255,159,46,.06); }
+  .hrow.skip .hd { color: var(--warn); }
+  .hrow.skip .hx { color: #FFD7A8; }
+  .hrow .hn { grid-column: 1 / -1; font-size: 12px; color: var(--warn); line-height: 1.4; }
   .hist-foot { display: flex; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
   .hist-foot input { flex: 1; }
 
@@ -430,7 +437,7 @@
   <div class="block hist-card">
     <div class="block-head">
       <div class="title">Historial</div>
-      <div class="legend"><span><i style="background:var(--ok)"></i>Automático</span><span><i style="background:var(--danger)"></i>Manual</span></div>
+      <div class="legend"><span><i style="background:var(--ok)"></i>Automático</span><span><i style="background:var(--danger)"></i>Manual</span><span><i style="background:var(--warn)"></i>No contado</span></div>
     </div>
     <div class="hist" id="hist"></div>
     <div class="hist-foot">
@@ -502,11 +509,12 @@
 
   /* ---------------- reloj sincronizado con el servidor ---------------- */
   let serverOffset = 0;
-  onValue(ref(db, ".info/serverTimeOffset"), (s) => { serverOffset = Number(s.val()) || 0; });
+  let offsetLoaded = false;
+  onValue(ref(db, ".info/serverTimeOffset"), (s) => { serverOffset = Number(s.val()) || 0; offsetLoaded = true; });
   const now = () => Date.now() + serverOffset;
 
   /* ---------------- estado ---------------- */
-  let state = { endTime: 0, isRunning: false, remainingMs: 0 };
+  let state = { endTime: 0, isRunning: false, remainingMs: 0, ended: false };
   let stateLoaded = false;
 
   const DEFAULT_PRICES = {
@@ -616,7 +624,7 @@
   /* ================= SUSCRIPCIONES ================= */
   onValue(timerRef, (snap) => {
     const v = snap.val();
-    if (v) state = { endTime: num(v.endTime), isRunning: !!v.isRunning, remainingMs: num(v.remainingMs) };
+    if (v) state = { endTime: num(v.endTime), isRunning: !!v.isRunning, remainingMs: num(v.remainingMs), ended: !!v.ended };
     else {
       state = { endTime: 0, isRunning: false, remainingMs: 0 };
       if (!DISPLAY) set(timerRef, state);
@@ -654,13 +662,26 @@
   });
 
   /* ================= LOOP ================= */
-  let lastStatus = 0;
+  let lastStatus = 0, lastZeroTry = -1e9;
   function tick() {
     const rem = currentRemaining();
     setText(fmt(rem));
-    if (state.isRunning && rem <= 0 && stateLoaded) {
-      state.isRunning = false;
-      update(timerRef, { isRunning: false, remainingMs: 0, endTime: 0 });
+    // Llegó a 0: se detiene con transacción y con la hora del servidor ya cargada.
+    // Así una PC con el reloj adelantado no puede apagar el timer antes de tiempo,
+    // y un sub que llega justo en el último segundo no se borra.
+    if (state.isRunning && rem <= 0 && stateLoaded && offsetLoaded) {
+      const t = performance.now();
+      if (t - lastZeroTry > 2000) {
+        lastZeroTry = t;
+        runTransaction(timerRef, (cur) => {
+          if (!cur || !cur.isRunning) return;              // ya está detenido
+          if (num(cur.endTime) - now() > 0) return;        // alguien sumó tiempo: no tocar
+          return { isRunning: false, remainingMs: 0, endTime: 0, ended: true };
+        }).then((res) => {
+          // solo la instancia que lo detuvo deja la marca en el historial
+          if (res && res.committed) addHistory("end", "El timer llegó a 0. Terminado: los eventos ya no suman", null);
+        }).catch(() => {});
+      }
     }
     if (!DISPLAY) {
       const t = performance.now();
@@ -673,26 +694,37 @@
 
   function updateRunStatus(rem) {
     const live = state.isRunning && rem > 0;
+    const ended = !state.isRunning && rem <= 0 && state.ended;
     $("runStatus").classList.toggle("live", live);
-    $("runText").textContent = live ? "EN MARCHA" : "PAUSADO";
+    $("runStatus").classList.toggle("ended", ended);
+    $("runText").textContent = live ? "EN MARCHA" : ended ? "TERMINADO · los eventos ya no suman" : "PAUSADO";
     $("btnPlay").classList.toggle("active", live);
     $("btnPause").classList.toggle("active", !live);
   }
 
   /* ================= OPERACIONES DEL TIMER ================= */
-  async function applyDelta(deltaMs) {
+  // auto = true para eventos de Twitch: si el timer ya terminó, no suman.
+  // Devuelve true si se aplicó, false si se bloqueó por estar terminado.
+  // Lo manual sí se aplica siempre; si deja tiempo > 0, el timer deja de estar terminado.
+  async function applyDelta(deltaMs, auto = false) {
+    let blocked = false;
     await runTransaction(timerRef, (cur) => {
       cur = cur || { endTime: 0, isRunning: false, remainingMs: 0 };
+      blocked = false;
+      if (auto && cur.ended) { blocked = true; return; }
       let rem = cur.isRunning ? Math.max(0, num(cur.endTime) - now()) : Math.max(0, num(cur.remainingMs));
       rem = Math.max(0, rem + deltaMs);
+      const ended = rem > 0 ? false : !!cur.ended;
       return cur.isRunning
-        ? { isRunning: true, endTime: now() + rem, remainingMs: rem }
-        : { isRunning: false, endTime: 0, remainingMs: rem };
+        ? { isRunning: true, endTime: now() + rem, remainingMs: rem, ended }
+        : { isRunning: false, endTime: 0, remainingMs: rem, ended };
     });
+    return !blocked;
   }
 
-  function addHistory(kind, text, deltaMs) {
+  function addHistory(kind, text, deltaMs, note) {
     const entry = { ts: now(), kind, text };
+    if (note) entry.note = note;
     if (deltaMs != null) entry.delta = Math.round(deltaMs);
     if (kind === "manual") entry.by = whereLabel();
     push(historyRef, entry).catch(() => {});
@@ -711,18 +743,20 @@
     } catch (e) { return false; }
   }
 
-  async function countEvent(lockPath, seconds, text) {
+  async function countEvent(lockPath, seconds, text, note) {
     if (!seconds || seconds <= 0) return;
     if (!(await claim(lockPath))) return;
     const ms = Math.round(seconds * 1000);
+    let applied;
     try {
-      await applyDelta(ms);
+      applied = await applyDelta(ms, true);
     } catch (e) {
       // si la suma falla, libera el candado para que otro la pueda contar
       set(ref(db, lockPath), null).catch(() => {});
       return;
     }
-    addHistory("auto", text, ms);
+    if (applied) addHistory("auto", text, ms, note);
+    else addHistory("skip", text, ms, "No sumó: el timer ya había terminado");
   }
 
   // limpia candados de eventos de más de 48 h
@@ -767,6 +801,8 @@
       default: return prices.t1; // Prime, 1000 y desconocido = T1
     }
   }
+  // varios meses pagados de golpe: se cuenta como 1 y se avisa para decidir a mano
+  const multiNote = (m) => m > 1 ? `Pagó ${m} meses juntos. Se contó como 1 sub; si quieres, suma el resto a mano.` : "";
   const planLabel = (p) => ({ Prime: "Prime", "1000": "T1", "2000": "T2", "3000": "T3" }[String(p)] || "T1");
 
   function handleLine(line, sock) {
@@ -778,6 +814,9 @@
     const user = tags["display-name"] || tags.login || "anónimo";
     const evId = tags.id || `${tags["msg-id"] || cmd}-${tags["user-id"] || ""}-${tags["tmi-sent-ts"] || ""}`;
     const lock = "events/" + safeKey(evId);
+
+    // Chat compartido (Shared Chat): ignorar todo lo que viene del canal del otro streamer.
+    if (tags["source-room-id"] && tags["room-id"] && tags["source-room-id"] !== tags["room-id"]) return;
 
     if (cmd === "PRIVMSG" && tags.bits) {
       const bits = parseInt(tags.bits, 10);
@@ -792,14 +831,30 @@
       case "sub":
       case "resub": {
         const plan = tags["msg-param-sub-plan"];
-        countEvent(lock, secondsForPlan(plan), `Sub ${planLabel(plan)} de ${user}`);
+        const months = parseInt(tags["msg-param-multimonth-duration"], 10) || 1;
+        countEvent(lock, secondsForPlan(plan), `Sub ${planLabel(plan)} de ${user}`, multiNote(months));
         return;
       }
       case "subgift":
       case "anonsubgift": {
         const plan = tags["msg-param-sub-plan"];
         const to = tags["msg-param-recipient-display-name"] || "";
-        countEvent(lock, secondsForPlan(plan), `Sub ${planLabel(plan)} regalado por ${user}${to ? " a " + to : ""}`);
+        const months = parseInt(tags["msg-param-gift-months"], 10) || 1;
+        countEvent(lock, secondsForPlan(plan), `Sub ${planLabel(plan)} regalado por ${user}${to ? " a " + to : ""}`, multiNote(months));
+        return;
+      }
+      // sigue pagando un sub que le regalaron = resub
+      case "giftpaidupgrade":
+      case "anongiftpaidupgrade": {
+        const plan = tags["msg-param-sub-plan"] || "1000";
+        const from = unesc(tags["msg-param-sender-name"]) || "";
+        countEvent(lock, secondsForPlan(plan), `Sub ${planLabel(plan)} de ${user} (sigue pagando el sub que le regaló${from ? " " + from : "ron"})`);
+        return;
+      }
+      // pasó de Prime a sub pagado = resub
+      case "primepaidupgrade": {
+        const plan = tags["msg-param-sub-plan"] || "1000";
+        countEvent(lock, secondsForPlan(plan), `Sub ${planLabel(plan)} de ${user} (pasó de Prime a pagado)`);
         return;
       }
       // submysterygift es solo el anuncio; cada regalo llega aparte como subgift
@@ -1021,7 +1076,7 @@
         const rem = Math.max(0, num(cur.remainingMs));
         if (rem <= 0) return cur;
         did = true;
-        return { isRunning: true, endTime: now() + rem, remainingMs: rem };
+        return { isRunning: true, endTime: now() + rem, remainingMs: rem, ended: false };
       });
       if (did) addHistory("manual", "Play", null);
     });
@@ -1032,7 +1087,7 @@
         did = false;
         if (!cur.isRunning) return cur;
         did = true;
-        return { isRunning: false, remainingMs: Math.max(0, num(cur.endTime) - now()), endTime: 0 };
+        return { isRunning: false, remainingMs: Math.max(0, num(cur.endTime) - now()), endTime: 0, ended: false };
       });
       if (did) addHistory("manual", "Pausa", null);
     });
@@ -1105,9 +1160,10 @@
       const rem = Math.max(0, ms);
       await runTransaction(timerRef, (cur) => {
         cur = cur || {};
+        const ended = rem > 0 ? false : !!cur.ended;   // poner tiempo > 0 reactiva el timer
         return cur.isRunning
-          ? { isRunning: true, endTime: now() + rem, remainingMs: rem }
-          : { isRunning: false, endTime: 0, remainingMs: rem };
+          ? { isRunning: true, endTime: now() + rem, remainingMs: rem, ended }
+          : { isRunning: false, endTime: 0, remainingMs: rem, ended };
       });
       addHistory("manual", `Sobrescrito de ${fmt(before)} a ${fmt(rem)}`, rem - before);
       ["ovH", "ovM", "ovS"].forEach((id) => { $(id).value = ""; });
@@ -1126,11 +1182,14 @@
       snap.forEach((c) => { rows.push(c.val()); });
       rows.reverse();
       histEl.innerHTML = rows.map((h) => {
-        const kind = h.kind === "manual" ? "manual" : "auto";
+        const kind = ({ manual: "manual", skip: "skip", end: "skip" })[h.kind] || "auto";
         let d = "";
-        if (h.delta != null) d = (h.delta >= 0 ? "+" : "-") + fmtDur(h.delta / 1000);
+        if (h.kind === "skip") d = "no sumó";
+        else if (h.kind === "end") d = "FIN";
+        else if (h.delta != null) d = (h.delta >= 0 ? "+" : "-") + fmtDur(h.delta / 1000);
         const by = h.by ? `<em>${esc(h.by)}</em>` : "";
-        return `<div class="hrow ${kind}"><span class="hx">${esc(h.text)}</span><span class="hd">${d}</span><span class="ht">${timeLabel(h.ts)}${by}</span></div>`;
+        const note = h.note ? `<span class="hn">${esc(h.note)}</span>` : "";
+        return `<div class="hrow ${kind}"><span class="hx">${esc(h.text)}</span><span class="hd">${d}</span>${note}<span class="ht">${timeLabel(h.ts)}${by}</span></div>`;
       }).join("");
     });
     $("btnClearHist").addEventListener("click", () => {
