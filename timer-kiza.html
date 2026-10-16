@@ -171,7 +171,7 @@
     .adj-row button { min-width: 0; }
   }
 
-  .quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   @media (max-width: 700px) { .quick { grid-template-columns: 1fr 1fr; } }
   .qbtn {
     display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left;
@@ -218,17 +218,25 @@
   .hist-foot { display: flex; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
   .hist-foot input { flex: 1; }
 
+  /* donación */
+  .qbtn.don { border-color: #2E4C8C; }
+
+
   /* precios */
+  #pricesBlock { border-color: rgba(47,123,255,.55); background: linear-gradient(180deg, #0D1A35 0%, var(--panel) 70%); box-shadow: 0 0 0 1px rgba(47,123,255,.12), 0 8px 30px rgba(47,123,255,.08); }
+  #pricesBlock > .title::before { background: var(--accent-2); box-shadow: 0 0 10px var(--accent-2); }
   .price-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   @media (max-width: 700px) { .price-grid { grid-template-columns: 1fr; } }
-  .pcard { background: var(--bg); border: 1px solid var(--border); border-radius: 11px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .pcard { background: #12234A; border: 1px solid #2E4C8C; border-radius: 11px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .pnote { font-size: 11px; color: var(--muted); }
   .pcard-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-  .pcard-head h3 { font-size: 13px; letter-spacing: .14em; color: var(--accent-2); text-transform: uppercase; }
+  .pcard-head h3 { font-size: 14px; letter-spacing: .14em; color: #5FD8FF; text-transform: uppercase; }
   .pitem { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; }
   .pitem .pl { font-size: 13px; color: var(--text); }
-  .pitem .pl small { display: block; font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+  .pitem .pl small { display: block; font-size: 11px; color: #91A6CF; margin-top: 3px; line-height: 1.4; }
   .pin { display: flex; align-items: center; gap: 6px; }
-  .pin input { width: 92px; text-align: center; font-size: 16px; font-weight: 700; padding: 9px 6px; background: var(--panel); }
+  .pin input { width: 92px; text-align: center; font-size: 17px; font-weight: 700; padding: 9px 6px; background: #050B1A; border-color: #3D66B8; color: #fff; }
+  .pin input:focus { border-color: var(--accent-2); box-shadow: 0 0 0 3px rgba(0,194,255,.18); }
   .pin span { font-size: 12px; color: var(--muted); min-width: 56px; }
   .pitem .conv { grid-column: 2; justify-self: end; font-size: 11px; color: var(--accent-2); min-height: 13px; }
   .examples {
@@ -319,6 +327,8 @@
       <button class="qbtn" data-quick="t2"><span class="qn">Sub Tier 2</span><span class="qv" id="qT2v"></span></button>
       <button class="qbtn" data-quick="t3"><span class="qn">Sub Tier 3</span><span class="qv" id="qT3v"></span></button>
       <button class="qbtn" data-quick="follow"><span class="qn">Follow</span><span class="qv" id="qFollowv"></span></button>
+      <button class="qbtn don" data-quick="donation"><span class="qn">Donación 1 USD</span><span class="qv" id="qDonUsdv"></span></button>
+      <button class="qbtn don" data-quick="donationMxn"><span class="qn">Donación 20 MXN</span><span class="qv" id="qDonMxnv"></span></button>
     </div>
   </div>
 
@@ -351,6 +361,14 @@
         <div class="pcard-head"><h3>Bits</h3></div>
         <div class="pitem"><div class="pl">Cada 100 bits<small>proporcional: 50 bits suman la mitad</small></div>
           <div class="pin"><input type="number" class="sec nospin" data-key="bitsPer100" min="0" step="1"><span>seg</span></div><span class="conv" data-conv="bitsPer100"></span></div>
+      </div>
+
+      <div class="pcard">
+        <div class="pcard-head"><h3>Donaciones PayPal</h3><span class="pnote">se suman con su botón</span></div>
+        <div class="pitem"><div class="pl">Cada 1 USD<small>dólares</small></div>
+          <div class="pin"><input type="number" class="sec nospin" data-key="donation" min="0" step="1"><span>seg</span></div><span class="conv" data-conv="donation"></span></div>
+        <div class="pitem"><div class="pl">Cada 20 MXN<small>pesos mexicanos</small></div>
+          <div class="pin"><input type="number" class="sec nospin" data-key="donationMxn" min="0" step="1"><span>seg</span></div><span class="conv" data-conv="donationMxn"></span></div>
       </div>
 
       <div class="pcard">
@@ -520,7 +538,8 @@
   const DEFAULT_PRICES = {
     t1: 300, t2: 600, t3: 1500, bitsPer100: 300,
     follow: 15, followOn: true,
-    raidBase: 120, raidPerViewer: 0, raidMin: 1, raidOn: true
+    raidBase: 120, raidPerViewer: 0, raidMin: 1, raidOn: true,
+    donation: 60, donationMxn: 60
   };
   let prices = { ...DEFAULT_PRICES };
   let pricesLoaded = false;
@@ -1130,7 +1149,7 @@
       });
     });
 
-    const quickNames = { t1: "Sub Tier 1 sumado a mano", t2: "Sub Tier 2 sumado a mano", t3: "Sub Tier 3 sumado a mano", follow: "Follow sumado a mano" };
+    const quickNames = { t1: "Sub Tier 1 sumado a mano", t2: "Sub Tier 2 sumado a mano", t3: "Sub Tier 3 sumado a mano", follow: "Follow sumado a mano", donation: "Donación PayPal de 1 USD", donationMxn: "Donación PayPal de 20 MXN" };
     document.querySelectorAll("[data-quick]").forEach((b) => {
       b.addEventListener("click", async () => {
         const sec = num(prices[b.dataset.quick]);
@@ -1258,7 +1277,7 @@
     }
 
     /* ---------------- precios ---------------- */
-    const TKEYS = ["t1", "t2", "t3", "bitsPer100", "follow", "raidBase"];
+    const TKEYS = ["t1", "t2", "t3", "bitsPer100", "follow", "raidBase", "donation", "donationMxn"];
     const secInput = (k) => document.querySelector(`input.sec[data-key="${k}"]`);
     function readT(k) { return Math.max(0, Math.round(num(secInput(k).value))); }
     function writeT(k, sec) { secInput(k).value = Math.max(0, Math.round(num(sec))); }
@@ -1289,6 +1308,8 @@
         `1 sub T1 = <b>${fmtDur(p.t1)}</b> · 5 subs T1 regalados = <b>${fmtDur(p.t1 * 5)}</b>`,
         `1 sub T2 = <b>${fmtDur(p.t2)}</b> · 1 sub T3 = <b>${fmtDur(p.t3)}</b>`,
         `100 bits = <b>${fmtDur(p.bitsPer100)}</b> · 500 bits = <b>${fmtDur(p.bitsPer100 * 5)}</b>`,
+        `Donación de 1 USD = <b>${fmtDur(p.donation)}</b> · de 10 USD = <b>${fmtDur(p.donation * 10)}</b>`,
+        `Donación de 20 MXN = <b>${fmtDur(p.donationMxn)}</b> · de 100 MXN = <b>${fmtDur(p.donationMxn * 5)}</b>`,
         `Follow = <b>${p.followOn ? fmtDur(p.follow) : "apagado"}</b>`,
         `Raid de 10 viewers = <b>${raid(10)}</b> · de 50 = <b>${raid(50)}</b>`
       ].join("<br>");
@@ -1298,6 +1319,8 @@
       $("qT2v").textContent = "+ " + fmtDur(prices.t2);
       $("qT3v").textContent = "+ " + fmtDur(prices.t3);
       $("qFollowv").textContent = "+ " + fmtDur(prices.follow);
+      $("qDonUsdv").textContent = "+ " + fmtDur(prices.donation);
+      $("qDonMxnv").textContent = "+ " + fmtDur(prices.donationMxn);
     }
     let priceDirty = false;
     let firstPrices = true;
