@@ -48,14 +48,23 @@
   body.display .stage.nobg { width: 100vw; height: 100vh; }
 
   /* ============ PANEL ============ */
-  #panel { max-width: 720px; margin: 0 auto; padding: 24px 16px 60px; }
-  .brand { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; gap: 10px; flex-wrap: wrap; }
-  .brand h1 { font-size: 16px; letter-spacing: 0.35em; color: var(--accent); }
-  .brand span { font-size: 11px; letter-spacing: 0.2em; color: var(--muted); }
+  body:not(.display) { font-size: 14px; }
+  #panel { max-width: 1240px; margin: 0 auto; padding: 28px 24px 60px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 24px; align-items: start; }
+  .col-main { min-width: 0; }
+  .col-side { position: sticky; top: 20px; }
+  @media (max-width: 1000px) {
+    .layout { grid-template-columns: 1fr; }
+    .col-side { position: static; }
+  }
+
+  .brand { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; gap: 10px; flex-wrap: wrap; }
+  .brand h1 { font-size: 20px; letter-spacing: 0.3em; color: var(--accent); }
+  .brand span { font-size: 13px; letter-spacing: 0.15em; color: var(--muted); }
 
   .preview {
     background: repeating-conic-gradient(#0c1326 0% 25%, #080d1a 0% 50%) 50% / 20px 20px;
-    border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
     display: flex; justify-content: center;
   }
   .preview .stage { width: 100%; }
@@ -63,39 +72,48 @@
   .preview .stage.nobg { aspect-ratio: 16 / 6; }
 
   /* play / pausa grandes */
-  .transport { display: flex; justify-content: center; gap: 28px; margin: 22px 0 10px; }
+  .transport { display: flex; justify-content: center; align-items: center; gap: 28px; margin: 24px 0 8px; }
   .tbtn {
-    width: 96px; height: 96px; border-radius: 50%; padding: 0;
+    width: 100px; height: 100px; border-radius: 50%; padding: 0;
     display: grid; place-items: center;
     background: var(--panel-2); border: 2px solid var(--border); color: var(--muted);
     transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
   }
-  .tbtn svg { width: 40px; height: 40px; fill: currentColor; }
+  .tbtn svg { width: 42px; height: 42px; fill: currentColor; }
   .tbtn:hover { color: var(--text); border-color: var(--accent); }
-  .tbtn.play.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 26px rgba(47,123,255,.55); }
+  .tbtn.play.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 28px rgba(47,123,255,.55); }
   .tbtn.pause.active { border-color: var(--accent-2); color: var(--accent-2); }
-  .run-status { text-align: center; margin-bottom: 20px; }
+  .run-status { text-align: center; margin-bottom: 24px; }
 
-  .status { font-size: 11px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; display: inline-flex; align-items: center; gap: 8px; }
-  .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .status { font-size: 12px; letter-spacing: 0.16em; color: var(--muted); text-transform: uppercase; display: inline-flex; align-items: center; gap: 9px; }
+  .status .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+  .status.live { color: var(--text); }
   .status.live .dot { background: var(--accent-2); box-shadow: 0 0 8px var(--accent-2); }
   .status.err .dot { background: var(--danger); }
 
-  .block { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
-  .block h2, details summary { font-size: 11px; letter-spacing: 0.22em; color: var(--muted); text-transform: uppercase; font-weight: 700; }
-  .block h2 { margin-bottom: 12px; }
-  .block-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
-  .block-head h2 { margin: 0; }
-  details.block summary { cursor: pointer; list-style: none; }
+  /* tarjetas */
+  .block { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+  .title {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 14px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text);
+  }
+  .title::before { content: ""; width: 4px; height: 16px; border-radius: 2px; background: var(--accent); flex: none; }
+  .title small { font-size: 11px; font-weight: 400; letter-spacing: 0.06em; text-transform: none; color: var(--muted); }
+  .block > .title { margin-bottom: 16px; }
+  .block-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+
+  details.block summary { cursor: pointer; list-style: none; justify-content: space-between; }
   details.block summary::-webkit-details-marker { display: none; }
-  details.block summary::before { content: "+ "; color: var(--accent); }
-  details.block[open] summary::before { content: "- "; }
-  details.block[open] summary { margin-bottom: 14px; }
+  details.block summary .chev { margin-left: auto; color: var(--muted); font-size: 18px; line-height: 1; transition: transform .15s; }
+  details.block[open] summary .chev { transform: rotate(90deg); }
+  details.block[open] summary { margin-bottom: 18px; }
+  details.block:not([open]) { padding-top: 18px; padding-bottom: 18px; }
+  details.block summary:hover .chev { color: var(--accent-2); }
 
   button {
     font-family: var(--mono); cursor: pointer;
     border: 1px solid var(--border); background: var(--panel-2); color: var(--text);
-    border-radius: 8px; padding: 10px 14px; font-size: 12px; letter-spacing: 0.08em; font-weight: 700;
+    border-radius: 9px; padding: 11px 16px; font-size: 13px; letter-spacing: 0.06em; font-weight: 700;
   }
   button:hover { border-color: var(--accent); }
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -103,90 +121,128 @@
   button.ghost { background: transparent; }
   button.danger { color: var(--danger); }
   button.danger:hover { border-color: var(--danger); }
-  button.small { padding: 6px 10px; font-size: 10px; }
+  button.small { padding: 7px 11px; font-size: 11px; }
 
   input[type="text"], input[type="number"], select {
     font-family: var(--mono); background: var(--bg); border: 1px solid var(--border); color: var(--text);
-    border-radius: 8px; padding: 9px 10px; font-size: 13px; width: 100%; min-width: 0;
+    border-radius: 9px; padding: 11px 12px; font-size: 14px; width: 100%; min-width: 0;
   }
   input:focus, select:focus { outline: none; border-color: var(--accent); }
-  input[type="color"] { width: 100%; height: 38px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); padding: 3px; cursor: pointer; }
+  input[type="color"] { width: 100%; height: 42px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); padding: 3px; cursor: pointer; }
   input[type="range"] { width: 100%; accent-color: var(--accent); }
+  input.nospin::-webkit-outer-spin-button, input.nospin::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input.nospin { -moz-appearance: textfield; }
 
-  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .row > * { flex: 1; }
   .row > .fit { flex: 0 0 auto; }
-  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  @media (max-width: 520px) { .grid3 { grid-template-columns: 1fr 1fr; } }
-  .field { display: flex; flex-direction: column; gap: 5px; }
-  .field label { font-size: 10px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 560px) { .grid3 { grid-template-columns: 1fr 1fr; } }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 11px; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; }
   .field label b { color: var(--text); font-weight: 400; }
-  .check { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text); cursor: pointer; }
-  .check input { accent-color: var(--accent); width: 15px; height: 15px; }
-  hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
-  .hint { font-size: 11px; color: var(--muted); line-height: 1.6; margin-top: 10px; }
+  .check { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text); cursor: pointer; }
+  .check input { accent-color: var(--accent); width: 16px; height: 16px; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+  .hint { font-size: 12px; color: var(--muted); line-height: 1.65; margin-top: 12px; }
   .hint code { color: var(--accent-2); }
-  .flash { font-size: 11px; color: var(--accent-2); min-height: 14px; margin-top: 8px; letter-spacing: 0.08em; }
-  .sublabel { font-size: 10px; letter-spacing: 0.15em; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
+  .flash { font-size: 12px; color: var(--accent-2); min-height: 16px; margin-top: 10px; letter-spacing: 0.04em; }
+  .sublabel { font-size: 11px; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+
+  /* agregar o quitar tiempo */
+  .adj { display: flex; flex-direction: column; gap: 10px; }
+  .adj-row {
+    display: grid; grid-template-columns: 150px minmax(90px, 1fr) auto auto; gap: 10px; align-items: center;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 11px; padding: 10px 10px 10px 16px;
+  }
+  .adj-row .unit { font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text); }
+  .adj-row .unit small { display: block; font-size: 11px; font-weight: 400; letter-spacing: .02em; text-transform: none; color: var(--accent-2); margin-top: 3px; min-height: 13px; }
+  .adj-row input { text-align: center; font-size: 20px; font-weight: 700; padding: 10px 6px; background: var(--panel); }
+  .adj-row button { min-width: 112px; padding: 13px 14px; }
+  .adj-row button.minus { color: var(--danger); background: transparent; }
+  .adj-row button.minus:hover { border-color: var(--danger); background: rgba(255,77,109,.08); }
+  @media (max-width: 560px) {
+    .adj-row { grid-template-columns: 1fr 1fr; padding: 12px; }
+    .adj-row .unit { grid-column: 1 / -1; }
+    .adj-row input { grid-column: 1 / -1; }
+    .adj-row button { min-width: 0; }
+  }
+
+  .quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  @media (max-width: 700px) { .quick { grid-template-columns: 1fr 1fr; } }
+  .qbtn {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left;
+    padding: 14px 14px; border-radius: 11px; background: var(--panel-2);
+  }
+  .qbtn .qn { font-size: 13px; letter-spacing: .04em; color: var(--text); }
+  .qbtn .qv { font-size: 16px; color: var(--accent-2); letter-spacing: .02em; }
+  .qbtn:hover { background: #14234a; }
+
+  /* tiempo exacto HH : MM : SS */
+  .hms-row { display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; }
+  .hms { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 260px; }
+  .hms .cell { flex: 1; display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+  .hms .cell label { font-size: 10px; letter-spacing: .16em; color: var(--muted); text-align: center; text-transform: uppercase; }
+  .hms input { text-align: center; font-size: 26px; font-weight: 700; padding: 12px 4px; font-variant-numeric: tabular-nums; }
+  .hms .sep { font-size: 28px; font-weight: 700; color: var(--muted); padding-top: 18px; }
+  .hms-row > button { align-self: flex-end; padding: 18px 22px; }
 
   /* historial */
-  .legend { display: flex; gap: 14px; font-size: 10px; color: var(--muted); letter-spacing: .1em; }
+  .hist-card { display: flex; flex-direction: column; max-height: calc(100vh - 40px); margin-bottom: 0; }
+  @media (max-width: 1000px) { .hist-card { max-height: none; } }
+  .legend { display: flex; gap: 16px; font-size: 11px; color: var(--muted); letter-spacing: .08em; }
   .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
-  .hist { max-height: 340px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
-  .hist:empty::before { content: "Todavía no hay movimientos."; font-size: 11px; color: var(--muted); }
+  .hist { flex: 1; min-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px; }
+  @media (max-width: 1000px) { .hist { max-height: 420px; } }
+  .hist:empty::before { content: "Todavía no hay movimientos."; font-size: 13px; color: var(--muted); padding: 8px 2px; }
   .hrow {
-    display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: baseline;
-    padding: 8px 10px; border-radius: 6px; background: var(--bg);
-    border-left: 3px solid var(--muted); font-size: 12px;
+    display: grid; grid-template-columns: 1fr auto; gap: 4px 12px;
+    padding: 10px 12px; border-radius: 8px; background: var(--bg);
+    border-left: 3px solid var(--muted);
   }
-  .hrow .ht { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .hrow .hx { color: var(--text); min-width: 0; overflow-wrap: anywhere; }
-  .hrow .hx small { color: var(--muted); margin-left: 6px; font-size: 10px; }
-  .hrow .hd { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .hrow .hx { font-size: 13px; color: var(--text); min-width: 0; overflow-wrap: anywhere; line-height: 1.4; }
+  .hrow .hd { font-size: 14px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; }
+  .hrow .ht { grid-column: 1 / -1; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .hrow .ht em { font-style: normal; margin-left: 8px; }
   .hrow.auto { border-left-color: var(--ok); }
   .hrow.auto .hd { color: var(--ok); }
   .hrow.manual { border-left-color: var(--danger); }
   .hrow.manual .hd { color: var(--danger); }
+  .hist-foot { display: flex; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .hist-foot input { flex: 1; }
 
   /* precios */
-  .prices { display: flex; flex-direction: column; }
-  .price-row {
-    display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center;
-    padding: 10px 0; border-bottom: 1px solid var(--border);
-  }
-  .price-row:last-child { border-bottom: none; }
-  .pname { font-size: 13px; color: var(--text); }
-  .pname small { display: block; font-size: 10px; color: var(--muted); margin-top: 3px; letter-spacing: .03em; }
-  .pname .check { margin-top: 6px; }
-  .nfield { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
-  .nfield input { width: 84px; text-align: center; padding: 8px 6px; }
-  .nfield .conv { min-width: 88px; color: var(--accent-2); }
-
-  /* sobrescribir HH : MM : SS */
-  .hms-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .hms { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 220px; }
-  .hms input { flex: 1; min-width: 0; text-align: center; font-size: 20px; font-weight: 700; padding: 10px 4px; font-variant-numeric: tabular-nums; }
-  .hms span { font-size: 22px; font-weight: 700; color: var(--muted); }
-  .hms input::-webkit-outer-spin-button, .hms input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-  .hms input[type=number] { -moz-appearance: textfield; }
-  .price-group { font-size: 10px; letter-spacing: .2em; color: var(--accent); text-transform: uppercase; margin: 14px 0 2px; }
-  .price-group:first-child { margin-top: 0; }
+  .price-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 700px) { .price-grid { grid-template-columns: 1fr; } }
+  .pcard { background: var(--bg); border: 1px solid var(--border); border-radius: 11px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .pcard-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .pcard-head h3 { font-size: 13px; letter-spacing: .14em; color: var(--accent-2); text-transform: uppercase; }
+  .pitem { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; }
+  .pitem .pl { font-size: 13px; color: var(--text); }
+  .pitem .pl small { display: block; font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+  .pin { display: flex; align-items: center; gap: 6px; }
+  .pin input { width: 92px; text-align: center; font-size: 16px; font-weight: 700; padding: 9px 6px; background: var(--panel); }
+  .pin span { font-size: 12px; color: var(--muted); min-width: 56px; }
+  .pitem .conv { grid-column: 2; justify-self: end; font-size: 11px; color: var(--accent-2); min-height: 13px; }
   .examples {
-    margin-top: 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
-    padding: 10px 12px; font-size: 11px; line-height: 1.9; color: var(--muted);
+    margin-top: 16px; background: var(--bg); border: 1px dashed var(--border); border-radius: 11px;
+    padding: 14px 16px; font-size: 13px; line-height: 2; color: var(--muted);
   }
-  .examples b { color: var(--accent-2); font-weight: 400; }
+  .examples b { color: var(--accent-2); font-weight: 700; }
 
   /* conexiones */
-  .conn-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .conn-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
 
-  .footer { text-align: center; font-size: 11px; color: var(--muted); margin-top: 18px; letter-spacing: 0.1em; }
+  .footer { text-align: center; font-size: 12px; color: var(--muted); margin-top: 20px; letter-spacing: 0.08em; }
   .footer a { color: var(--accent-2); }
 </style>
 </head>
 <body>
 
 <div id="panel">
+<div class="layout">
+<div class="col-main">
+
   <div class="brand">
     <h1>TIMER</h1>
     <span>kizashi_saya</span>
@@ -210,63 +266,111 @@
   </div>
   <div class="run-status"><div class="status" id="runStatus"><span class="dot"></span><span id="runText">PAUSADO</span></div></div>
 
-  <!-- AGREGAR O CORREGIR -->
+  <!-- PON EL TIEMPO EXACTO -->
   <div class="block">
-    <h2>Agregar o corregir</h2>
-    <div class="row">
-      <input type="number" id="adjVal" value="5" min="0" step="1">
-      <select id="adjUnit">
-        <option value="1">segundos</option>
-        <option value="60" selected>minutos</option>
-        <option value="3600">horas</option>
-      </select>
-      <button class="fit primary" id="btnAdd">+ SUMAR</button>
-      <button class="fit danger" id="btnSub">- RESTAR</button>
-    </div>
-    <div class="row" style="margin-top:10px;">
-      <button data-quick="t1" id="qT1">+ SUB T1</button>
-      <button data-quick="t2" id="qT2">+ SUB T2</button>
-      <button data-quick="t3" id="qT3">+ SUB T3</button>
-      <button data-quick="follow" id="qFollow">+ FOLLOW</button>
-    </div>
-    <hr>
-    <div class="sublabel">Sobrescribir el timer a un valor exacto</div>
+    <div class="title">Pon el tiempo exacto</div>
     <div class="hms-row">
       <div class="hms">
-        <input type="number" id="ovH" min="0" step="1" placeholder="HH" aria-label="Horas">
-        <span>:</span>
-        <input type="number" id="ovM" min="0" max="59" step="1" placeholder="MM" aria-label="Minutos">
-        <span>:</span>
-        <input type="number" id="ovS" min="0" max="59" step="1" placeholder="SS" aria-label="Segundos">
+        <div class="cell"><label for="ovH">Horas</label><input type="number" class="nospin" id="ovH" min="0" step="1" placeholder="00"></div>
+        <span class="sep">:</span>
+        <div class="cell"><label for="ovM">Minutos</label><input type="number" class="nospin" id="ovM" min="0" max="59" step="1" placeholder="00"></div>
+        <span class="sep">:</span>
+        <div class="cell"><label for="ovS">Segundos</label><input type="number" class="nospin" id="ovS" min="0" max="59" step="1" placeholder="00"></div>
       </div>
-      <button class="ghost" id="btnLoadNow" title="Cargar el tiempo actual en las casillas">ACTUAL</button>
-      <button id="btnSetExact">SOBRESCRIBIR</button>
+      <button class="primary" id="btnSetExact">PONER TIEMPO</button>
     </div>
   </div>
 
-  <!-- HISTORIAL -->
+  <!-- AGREGAR O QUITAR TIEMPO -->
   <div class="block">
-    <div class="block-head">
-      <h2>Historial</h2>
-      <div class="legend"><span><i style="background:var(--ok)"></i>Automático</span><span><i style="background:var(--danger)"></i>Manual</span></div>
+    <div class="title">Agregar o quitar tiempo</div>
+    <div class="adj">
+      <div class="adj-row">
+        <div class="unit">Horas<small id="cvH"></small></div>
+        <input type="number" class="nospin" id="adjH" min="0" step="1" value="1">
+        <button class="minus" data-adj="3600" data-sign="-1">- QUITAR</button>
+        <button class="primary" data-adj="3600" data-sign="1">+ AGREGAR</button>
+      </div>
+      <div class="adj-row">
+        <div class="unit">Minutos<small id="cvM"></small></div>
+        <input type="number" class="nospin" id="adjM" min="0" step="1" value="5">
+        <button class="minus" data-adj="60" data-sign="-1">- QUITAR</button>
+        <button class="primary" data-adj="60" data-sign="1">+ AGREGAR</button>
+      </div>
+      <div class="adj-row">
+        <div class="unit">Segundos<small id="cvS"></small></div>
+        <input type="number" class="nospin" id="adjS" min="0" step="1" value="30">
+        <button class="minus" data-adj="1" data-sign="-1">- QUITAR</button>
+        <button class="primary" data-adj="1" data-sign="1">+ AGREGAR</button>
+      </div>
     </div>
-    <div class="row" style="margin-bottom:12px;">
-      <input type="text" id="myName" placeholder="Tu nombre (aparece en los cambios manuales)">
-      <button class="fit ghost small danger" id="btnClearHist">Borrar historial</button>
+
+    <hr>
+    <div class="sublabel">Sumar a mano un evento que no se contó</div>
+    <div class="quick">
+      <button class="qbtn" data-quick="t1"><span class="qn">Sub Tier 1 / Prime</span><span class="qv" id="qT1v"></span></button>
+      <button class="qbtn" data-quick="t2"><span class="qn">Sub Tier 2</span><span class="qv" id="qT2v"></span></button>
+      <button class="qbtn" data-quick="t3"><span class="qn">Sub Tier 3</span><span class="qv" id="qT3v"></span></button>
+      <button class="qbtn" data-quick="follow"><span class="qn">Follow</span><span class="qv" id="qFollowv"></span></button>
     </div>
-    <div class="hist" id="hist"></div>
   </div>
 
-  <!-- TWITCH -->
+  <!-- PRECIOS -->
+  <div class="block" id="pricesBlock">
+    <div class="title">Precios <small>cuánto tiempo suma cada evento, en segundos</small></div>
+    <div class="price-grid">
+
+      <div class="pcard">
+        <div class="pcard-head"><h3>Subs</h3></div>
+        <div class="pitem"><div class="pl">Tier 1 / Prime<small>también cada regalado de T1</small></div>
+          <div class="pin"><input type="number" class="sec nospin" data-key="t1" min="0" step="1"><span>seg</span></div><span class="conv" data-conv="t1"></span></div>
+        <div class="pitem"><div class="pl">Tier 2</div>
+          <div class="pin"><input type="number" class="sec nospin" data-key="t2" min="0" step="1"><span>seg</span></div><span class="conv" data-conv="t2"></span></div>
+        <div class="pitem"><div class="pl">Tier 3</div>
+          <div class="pin"><input type="number" class="sec nospin" data-key="t3" min="0" step="1"><span>seg</span></div><span class="conv" data-conv="t3"></span></div>
+      </div>
+
+      <div class="pcard">
+        <div class="pcard-head"><h3>Raids</h3><label class="check"><input type="checkbox" id="cfgRaidOn"> Activado</label></div>
+        <div class="pitem"><div class="pl">Tiempo fijo<small>lo que suma cada raid</small></div>
+          <div class="pin"><input type="number" class="sec nospin" data-key="raidBase" min="0" step="1"><span>seg</span></div><span class="conv" data-conv="raidBase"></span></div>
+        <div class="pitem"><div class="pl">Extra por viewer<small>0 = no da extra</small></div>
+          <div class="pin"><input type="number" class="nospin" id="cfgRaidPer" min="0" step="0.5"><span>seg</span></div></div>
+        <div class="pitem"><div class="pl">Mínimo de viewers<small>raids más chicos no suman</small></div>
+          <div class="pin"><input type="number" class="nospin" id="cfgRaidMin" min="0" step="1"><span>viewers</span></div></div>
+      </div>
+
+      <div class="pcard">
+        <div class="pcard-head"><h3>Bits</h3></div>
+        <div class="pitem"><div class="pl">Cada 100 bits<small>proporcional: 50 bits suman la mitad</small></div>
+          <div class="pin"><input type="number" class="sec nospin" data-key="bitsPer100" min="0" step="1"><span>seg</span></div><span class="conv" data-conv="bitsPer100"></span></div>
+      </div>
+
+      <div class="pcard">
+        <div class="pcard-head"><h3>Follows</h3><label class="check"><input type="checkbox" id="cfgFollowOn"> Activado</label></div>
+        <div class="pitem"><div class="pl">Cada follow<small>solo el primero de cada persona</small></div>
+          <div class="pin"><input type="number" class="sec nospin" data-key="follow" min="0" step="1"><span>seg</span></div><span class="conv" data-conv="follow"></span></div>
+      </div>
+
+    </div>
+    <div class="examples" id="priceExamples"></div>
+    <div class="row" style="margin-top:16px;">
+      <button class="primary" id="btnSavePrices">GUARDAR PRECIOS</button>
+      <button class="fit ghost" id="btnDiscardPrices">Descartar</button>
+    </div>
+    <div class="flash" id="priceFlash"></div>
+  </div>
+
+  <!-- CONEXIÓN TWITCH -->
   <details class="block">
-    <summary>Conexión Twitch · kizashi_saya</summary>
+    <summary class="title">Conexión Twitch <small>kizashi_saya</small><span class="chev">&rsaquo;</span></summary>
     <div class="sublabel">Quién está contando eventos ahora</div>
     <div class="conn-list" id="connList"></div>
     <p class="hint">Cada panel y cada overlay abierto en OBS escucha el chat. Cada evento se cuenta una sola vez, sin importar cuántos estén abiertos.</p>
     <hr>
     <div class="sublabel">Follows</div>
     <div class="status" id="folStatus"><span class="dot"></span><span id="folText">SIN CONFIGURAR</span></div>
-    <div class="row" style="margin-top:10px;">
+    <div class="row" style="margin-top:12px;">
       <input type="text" id="clientId" placeholder="Client ID de tu app de Twitch">
       <button class="fit primary" id="btnAuth">AUTORIZAR</button>
       <button class="fit ghost" id="btnFolOff">Quitar</button>
@@ -274,45 +378,9 @@
     <p class="hint">Inicia sesión con una cuenta que sea <b>mod</b> de kizashi_saya (o la suya). Solo un panel u overlay a la vez escucha los follows; si se cierra, otro toma el relevo solo. Redirect URL de la app: <code id="redirectHint"></code></p>
   </details>
 
-  <!-- PRECIOS -->
-  <details class="block" id="pricesBlock">
-    <summary>Precios · cuánto tiempo suma cada cosa</summary>
-    <div class="prices">
-      <div class="price-group">Subs</div>
-      <div class="price-row"><div class="pname">Sub Tier 1 / Prime<small>también cada sub regalado de T1</small></div>
-        <div class="nfield"><input type="number" class="sec" data-key="t1" min="0" step="1"> seg <span class="conv" data-conv="t1"></span></div></div>
-      <div class="price-row"><div class="pname">Sub Tier 2</div>
-        <div class="nfield"><input type="number" class="sec" data-key="t2" min="0" step="1"> seg <span class="conv" data-conv="t2"></span></div></div>
-      <div class="price-row"><div class="pname">Sub Tier 3</div>
-        <div class="nfield"><input type="number" class="sec" data-key="t3" min="0" step="1"> seg <span class="conv" data-conv="t3"></span></div></div>
-
-      <div class="price-group">Bits</div>
-      <div class="price-row"><div class="pname">Cada 100 bits<small>es proporcional: 50 bits suman la mitad</small></div>
-        <div class="nfield"><input type="number" class="sec" data-key="bitsPer100" min="0" step="1"> seg <span class="conv" data-conv="bitsPer100"></span></div></div>
-
-      <div class="price-group">Follows</div>
-      <div class="price-row"><div class="pname">Cada follow<small>solo el primer follow de cada persona</small><label class="check"><input type="checkbox" id="cfgFollowOn"> activado</label></div>
-        <div class="nfield"><input type="number" class="sec" data-key="follow" min="0" step="1"> seg <span class="conv" data-conv="follow"></span></div></div>
-
-      <div class="price-group">Raids</div>
-      <div class="price-row"><div class="pname">Tiempo fijo por raid<label class="check"><input type="checkbox" id="cfgRaidOn"> activado</label></div>
-        <div class="nfield"><input type="number" class="sec" data-key="raidBase" min="0" step="1"> seg <span class="conv" data-conv="raidBase"></span></div></div>
-      <div class="price-row"><div class="pname">Extra por cada viewer<small>se suma al fijo; 0 = no da extra</small></div>
-        <div class="nfield"><input type="number" id="cfgRaidPer" min="0" step="0.5"> seg</div></div>
-      <div class="price-row"><div class="pname">Mínimo de viewers<small>raids más chicos no suman</small></div>
-        <div class="nfield"><input type="number" id="cfgRaidMin" min="0" step="1"> viewers</div></div>
-    </div>
-    <div class="examples" id="priceExamples"></div>
-    <div class="row" style="margin-top:14px;">
-      <button class="primary" id="btnSavePrices">GUARDAR PRECIOS</button>
-      <button class="fit ghost" id="btnDiscardPrices">Descartar</button>
-    </div>
-    <div class="flash" id="priceFlash"></div>
-  </details>
-
   <!-- ESTILO -->
   <details class="block">
-    <summary>Estilo del overlay</summary>
+    <summary class="title">Estilo del overlay <small>fondo, colores y posición</small><span class="chev">&rsaquo;</span></summary>
     <div class="field">
       <label>Imagen de fondo (URL o archivo junto al HTML)</label>
       <div class="row">
@@ -346,7 +414,7 @@
       <div class="field"><label>Posición Y <b id="vY"></b></label><input type="range" id="stY" min="0" max="100" step="0.5"></div>
       <div class="field"><label>Espaciado <b id="vSpacing"></b></label><input type="range" id="stSpacing" min="-10" max="30" step="1"></div>
     </div>
-    <div class="row" style="margin-top:14px;">
+    <div class="row" style="margin-top:16px;">
       <button class="ghost" id="btnStyleReset">Restablecer estilo</button>
       <button class="primary" id="btnDownload">DESCARGAR OVERLAY</button>
     </div>
@@ -355,6 +423,24 @@
   </details>
 
   <div class="footer">Overlay para OBS: <a id="displayLink" href="?display" target="_blank">?display</a> · fondo transparente</div>
+</div>
+
+<!-- HISTORIAL (derecha) -->
+<aside class="col-side">
+  <div class="block hist-card">
+    <div class="block-head">
+      <div class="title">Historial</div>
+      <div class="legend"><span><i style="background:var(--ok)"></i>Automático</span><span><i style="background:var(--danger)"></i>Manual</span></div>
+    </div>
+    <div class="hist" id="hist"></div>
+    <div class="hist-foot">
+      <input type="text" id="myName" placeholder="Tu nombre (sale en lo manual)">
+      <button class="ghost small danger" id="btnClearHist">Borrar</button>
+    </div>
+  </div>
+</aside>
+
+</div>
 </div>
 
 <script type="module">
@@ -951,25 +1037,45 @@
       if (did) addHistory("manual", "Pausa", null);
     });
 
-    /* ---------------- agregar o corregir ---------------- */
-    function adjAmount() {
-      const v = num($("adjVal").value, NaN);
-      if (!isFinite(v) || v === 0) return 0;
-      return Math.abs(v) * num($("adjUnit").value, 60);
+    /* ---------------- agregar o quitar tiempo ----------------
+       Horas, minutos y segundos por separado, sin límite:
+       700 segundos funciona igual (= 11 min 40 seg). */
+    const ADJ_INPUT = { 3600: "adjH", 60: "adjM", 1: "adjS" };
+    const ADJ_CONV = { 3600: "cvH", 60: "cvM", 1: "cvS" };
+    const ADJ_NAME = { 3600: ["hora", "horas"], 60: ["minuto", "minutos"], 1: ["segundo", "segundos"] };
+    function adjSeconds(unit) {
+      const v = Math.floor(Math.abs(num($(ADJ_INPUT[unit]).value)));
+      return { count: v, sec: v * unit };
     }
-    $("btnAdd").addEventListener("click", async () => {
-      const s = adjAmount(); if (!s) return;
-      await applyDelta(s * 1000);
-      addHistory("manual", "Suma manual", s * 1000);
-    });
-    $("btnSub").addEventListener("click", async () => {
-      const s = adjAmount(); if (!s) return;
-      const before = currentRemaining();
-      await applyDelta(-s * 1000);
-      addHistory("manual", "Resta manual", -Math.min(before, s * 1000));
+    function renderAdjConv() {
+      for (const unit of [3600, 60, 1]) {
+        const { count, sec } = adjSeconds(unit);
+        // solo muestra la conversión cuando aporta (ej. 700 seg = 11 min 40 seg)
+        const show = count > 0 && ((unit === 1 && sec >= 60) || (unit === 60 && sec >= 3600));
+        $(ADJ_CONV[unit]).textContent = show ? "= " + fmtDur(sec) : "";
+      }
+    }
+    Object.values(ADJ_INPUT).forEach((id) => $(id).addEventListener("input", renderAdjConv));
+    renderAdjConv();
+
+    document.querySelectorAll("[data-adj]").forEach((b) => {
+      b.addEventListener("click", async () => {
+        const unit = Number(b.dataset.adj), sign = Number(b.dataset.sign);
+        const { count, sec } = adjSeconds(unit);
+        if (!sec) return;
+        const label = `${count} ${ADJ_NAME[unit][count === 1 ? 0 : 1]}`;
+        if (sign > 0) {
+          await applyDelta(sec * 1000);
+          addHistory("manual", `Agregado a mano: ${label}`, sec * 1000);
+        } else {
+          const before = currentRemaining();
+          await applyDelta(-sec * 1000);
+          addHistory("manual", `Quitado a mano: ${label}`, -Math.min(before, sec * 1000));
+        }
+      });
     });
 
-    const quickNames = { t1: "Sub T1 agregado a mano", t2: "Sub T2 agregado a mano", t3: "Sub T3 agregado a mano", follow: "Follow agregado a mano" };
+    const quickNames = { t1: "Sub Tier 1 sumado a mano", t2: "Sub Tier 2 sumado a mano", t3: "Sub Tier 3 sumado a mano", follow: "Follow sumado a mano" };
     document.querySelectorAll("[data-quick]").forEach((b) => {
       b.addEventListener("click", async () => {
         const sec = num(prices[b.dataset.quick]);
@@ -990,12 +1096,6 @@
     $("ovH").addEventListener("input", () => clampField("ovH", null));
     $("ovM").addEventListener("input", () => clampField("ovM", 59));
     $("ovS").addEventListener("input", () => clampField("ovS", 59));
-    $("btnLoadNow").addEventListener("click", () => {
-      const t = Math.floor(currentRemaining() / 1000);
-      $("ovH").value = Math.floor(t / 3600);
-      $("ovM").value = Math.floor((t % 3600) / 60);
-      $("ovS").value = t % 60;
-    });
     $("btnSetExact").addEventListener("click", async () => {
       if ($("ovH").value === "" && $("ovM").value === "" && $("ovS").value === "") return;
       ["ovH", "ovM", "ovS"].forEach((id, i) => clampField(id, i ? 59 : null));
@@ -1029,8 +1129,8 @@
         const kind = h.kind === "manual" ? "manual" : "auto";
         let d = "";
         if (h.delta != null) d = (h.delta >= 0 ? "+" : "-") + fmtDur(h.delta / 1000);
-        const by = h.by ? `<small>${esc(h.by)}</small>` : "";
-        return `<div class="hrow ${kind}"><span class="ht">${timeLabel(h.ts)}</span><span class="hx">${esc(h.text)}${by}</span><span class="hd">${d}</span></div>`;
+        const by = h.by ? `<em>${esc(h.by)}</em>` : "";
+        return `<div class="hrow ${kind}"><span class="hx">${esc(h.text)}</span><span class="hd">${d}</span><span class="ht">${timeLabel(h.ts)}${by}</span></div>`;
       }).join("");
     });
     $("btnClearHist").addEventListener("click", () => {
@@ -1135,10 +1235,10 @@
       ].join("<br>");
     }
     function updateQuickLabels() {
-      $("qT1").textContent = `+ SUB T1 (${fmtDur(prices.t1)})`;
-      $("qT2").textContent = `+ SUB T2 (${fmtDur(prices.t2)})`;
-      $("qT3").textContent = `+ SUB T3 (${fmtDur(prices.t3)})`;
-      $("qFollow").textContent = `+ FOLLOW (${fmtDur(prices.follow)})`;
+      $("qT1v").textContent = "+ " + fmtDur(prices.t1);
+      $("qT2v").textContent = "+ " + fmtDur(prices.t2);
+      $("qT3v").textContent = "+ " + fmtDur(prices.t3);
+      $("qFollowv").textContent = "+ " + fmtDur(prices.follow);
     }
     let priceDirty = false;
     let firstPrices = true;
