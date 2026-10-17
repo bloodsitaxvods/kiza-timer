@@ -655,7 +655,8 @@
   let frames = [], frameEls = [], frameKey = "", curFrame = -1;
   function setFrames(list) {
     list = (list || []).filter((f) => f && f.src);
-    const key = list.map((f) => f.src.length + ":" + f.src.slice(-40)).join("|");
+    // por id (cada imagen subida tiene uno propio); el overlay descargado usa el texto completo
+    const key = list.map((f, i) => (f.id ? f.id : i + ":" + f.src.length + ":" + f.src.slice(-200)) + ":" + f.src.length).join("|");
     if (key === frameKey) {                       // mismas imágenes: solo cambian tiempos
       frames = list.map((f, i) => ({ src: f.src, ms: Math.max(30, num(f.ms, 1000)), el: frameEls[i] }));
       return;
@@ -800,11 +801,17 @@
   // Devuelve true si se aplicó, false si se bloqueó por estar terminado.
   // Lo manual sí se aplica siempre; si deja tiempo > 0, el timer deja de estar terminado.
   async function applyDelta(deltaMs, auto = false) {
-    let blocked = false;
+    let blocked = false, endedNow = false;
     await runTransaction(timerRef, (cur) => {
       cur = cur || { endTime: 0, isRunning: false, remainingMs: 0 };
-      blocked = false;
+      blocked = false; endedNow = false;
       if (auto && cur.ended) { blocked = true; return; }
+      // El timer ya pasó de 0 pero nadie lo marcó como terminado (por ejemplo, solo había
+      // pestañas en segundo plano). Un evento automático no lo revive: se marca terminado.
+      if (auto && offsetLoaded && cur.isRunning && num(cur.endTime) - now() <= 0) {
+        blocked = true; endedNow = true;
+        return { isRunning: false, remainingMs: 0, endTime: 0, ended: true };
+      }
       let rem = cur.isRunning ? Math.max(0, num(cur.endTime) - now()) : Math.max(0, num(cur.remainingMs));
       rem = Math.max(0, rem + deltaMs);
       const ended = rem > 0 ? false : !!cur.ended;
@@ -812,6 +819,7 @@
         ? { isRunning: true, endTime: now() + rem, remainingMs: rem, ended }
         : { isRunning: false, endTime: 0, remainingMs: rem, ended };
     });
+    if (endedNow) addHistory("end", "El timer llegó a 0. Terminado: los eventos ya no suman", null);
     return !blocked;
   }
 
@@ -965,6 +973,15 @@
   }
 
   let ws = null, ircRetry = null, ircGen = 0;
+  // Vigilancia: si el chat lleva rato en silencio se le manda PING; si tampoco responde,
+  // la conexión está muerta aunque el navegador no lo sepa, y se reconecta.
+  let ircLastRx = 0, ircPinged = false;
+  setInterval(() => {
+    if (!ws || ws.readyState !== 1) return;
+    const idle = Date.now() - ircLastRx;
+    if (idle > 75000) { try { ws.close(); } catch (e) {} ircConnect(); return; }
+    if (idle > 40000 && !ircPinged) { ircPinged = true; try { ws.send("PING :kz-timer"); } catch (e) {} }
+  }, 15000);
   function setIrc(live, text) {
     ircLive = live;
     announce();
@@ -978,6 +995,7 @@
     const sock = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
     ws = sock;
     sock.onopen = () => {
+      ircLastRx = Date.now(); ircPinged = false;
       sock.send("CAP REQ :twitch.tv/tags twitch.tv/commands");
       sock.send("PASS SCHMOOPIIE");
       sock.send("NICK justinfan" + Math.floor(Math.random() * 80000 + 1000));
@@ -985,6 +1003,7 @@
     };
     sock.onmessage = (e) => {
       if (gen !== ircGen) return;
+      ircLastRx = Date.now(); ircPinged = false;
       for (const line of e.data.split("\r\n")) {
         if (!line) continue;
         if (line.includes(" 001 ")) setIrc(true, "conectado");
@@ -1051,6 +1070,16 @@
   });
 
   let esWs = null, esGen = 0, esRetry = null, fctx = null;
+  // Vigilancia de follows: Twitch manda un "keepalive" cada ~10 s. Si pasa mucho más sin
+  // recibir nada, la conexión murió en silencio y se reconecta.
+  let esLastRx = 0, esKeepalive = 10;
+  setInterval(() => {
+    if (!isLeader || !esWs || esWs.readyState !== 1) return;
+    if (Date.now() - esLastRx > (esKeepalive + 20) * 1000) {
+      setFollowStatus("sin señal de Twitch, reconectando", "err");
+      followConnect();
+    }
+  }, 5000);
 
   function followStop() {
     esGen++;
@@ -1093,9 +1122,11 @@
     const sock = new WebSocket(url);
     sock.onmessage = async (e) => {
       if (gen !== esGen) return;
+      esLastRx = Date.now();
       let m; try { m = JSON.parse(e.data); } catch (err) { return; }
       const type = m.metadata && m.metadata.message_type;
       if (type === "session_welcome") {
+        esKeepalive = num(m.payload.session.keepalive_timeout_seconds, 10) || 10;
         const old = esWs;
         esWs = sock;
         if (old && old !== sock) { old._replaced = true; try { old.close(); } catch (err) {} }
