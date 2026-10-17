@@ -29,6 +29,8 @@
   .stage { position: relative; display: inline-block; line-height: 0; }
   .stage img.bg { display: block; user-select: none; pointer-events: none; }
   .stage.nobg img.bg { display: none; }
+  .stage img.bg.layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain; }
+  .stage img.bg.off { visibility: hidden; }
   .tmr {
     position: absolute; left: 50%; top: 50%;
     transform: translate(-50%, -50%);
@@ -245,6 +247,23 @@
   }
   .examples b { color: var(--accent-2); font-weight: 700; }
 
+  /* secuencia de imágenes */
+  .frame-list { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 12px; }
+  .frame-list:empty::before { content: "Sin imágenes: el timer se muestra sin fondo."; font-size: 12px; color: var(--muted); }
+  .frow { display: grid; grid-template-columns: 30px 120px 1fr auto; gap: 12px; align-items: center;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; }
+  .frow .fnum { font-size: 16px; font-weight: 700; color: var(--accent-2); text-align: center; }
+  .frow .fthumb { width: 120px; height: 48px; object-fit: contain; border-radius: 6px;
+    background: repeating-conic-gradient(#0c1326 0% 25%, #080d1a 0% 50%) 50% / 12px 12px; }
+  .frow .fdur { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+  .frow .fdur input { width: 90px; text-align: center; font-weight: 700; font-size: 16px; padding: 8px 6px; }
+  .frow .fbtns { display: flex; gap: 6px; }
+  .frow .fbtns button { padding: 8px 10px; font-size: 12px; }
+  .frow.now { border-color: var(--accent-2); box-shadow: 0 0 0 1px rgba(0,194,255,.25); }
+  .cycle { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .cycle b { color: var(--accent-2); }
+  @media (max-width: 560px) { .frow { grid-template-columns: 26px 1fr; } .frow .fdur, .frow .fbtns { grid-column: 1 / -1; } }
+
   /* conexiones */
   .conn-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
 
@@ -405,17 +424,17 @@
 
   <!-- ESTILO -->
   <details class="block">
-    <summary class="title">Estilo del overlay <small>fondo, colores y posición</small><span class="chev">&rsaquo;</span></summary>
-    <div class="field">
-      <label>Imagen de fondo (URL o archivo junto al HTML)</label>
-      <div class="row">
-        <input type="text" id="bgUrl" placeholder="fondo-timer.png">
-        <button class="fit" id="btnBgApply">USAR URL</button>
-        <button class="fit" id="btnBgFile">SUBIR ARCHIVO</button>
-        <button class="fit ghost danger" id="btnBgClear">Quitar</button>
-      </div>
-      <input type="file" id="bgFile" accept="image/*" hidden>
+    <summary class="title">Estilo del overlay <small>imágenes, colores y posición</small><span class="chev">&rsaquo;</span></summary>
+    <div class="sublabel">Imágenes del marco · se muestran en orden y se repiten</div>
+    <div class="frame-list" id="frameList"></div>
+    <div class="cycle" id="cycleInfo"></div>
+    <div class="row">
+      <button class="fit primary" id="btnAddFrames">+ AGREGAR IMÁGENES</button>
+      <input type="text" id="frameUrl" placeholder="o pega la URL de una imagen">
+      <button class="fit" id="btnAddFrameUrl">AGREGAR URL</button>
     </div>
+    <input type="file" id="frameFiles" accept="image/*" multiple hidden>
+    <p class="hint">Una imagen = fondo fijo. Varias = animación: 1, 2, 3 y vuelve a la 1, cada una con su tiempo. Puedes elegir varias a la vez; se ordenan por nombre de archivo. También acepta GIF animado, pero un PNG tiene bordes más limpios.</p>
     <hr>
     <div class="grid3">
       <div class="field"><label>Color número</label><input type="color" id="stColor"></div>
@@ -507,7 +526,9 @@
   const timerRef  = ref(db, "timer");
   const pricesRef = ref(db, "prices");
   const styleRef  = ref(db, "style");
-  const bgRef     = ref(db, "bg");
+  const bgRef     = ref(db, "bg");          // fondo de versiones anteriores (se migra a frames)
+  const frameListRef = ref(db, "frameList"); // [{ id, ms }] orden y duración
+  const frameDataRef = ref(db, "frameData"); // { id: src } imágenes
   const configRef = ref(db, "config");
   const historyRef = ref(db, "history");
 
@@ -625,11 +646,53 @@
     fitSize();
   }
 
-  function setBg(src) {
-    if (!src) { stage.classList.add("nobg"); bgImg.removeAttribute("src"); fitSize(); return; }
-    bgImg.onload = () => { stage.classList.remove("nobg"); fitSize(); };
-    bgImg.onerror = () => { stage.classList.add("nobg"); fitSize(); };
-    bgImg.src = src;
+  /* ---------- secuencia de imágenes del marco ----------
+     frames = [{ src, ms }]. Se muestran en orden y se repiten.
+     Todas las imágenes se cargan apiladas y solo se cambia cuál es visible,
+     así no hay parpadeo al cambiar. */
+  let frames = [], frameEls = [], frameKey = "", curFrame = -1;
+  function setFrames(list) {
+    list = (list || []).filter((f) => f && f.src);
+    const key = list.map((f) => f.src.length + ":" + f.src.slice(-40)).join("|");
+    if (key === frameKey) {                       // mismas imágenes: solo cambian tiempos
+      frames = list.map((f, i) => ({ src: f.src, ms: Math.max(30, num(f.ms, 1000)), el: frameEls[i] }));
+      return;
+    }
+    frameKey = key;
+    frameEls.forEach((el) => { if (el !== bgImg) el.remove(); });
+    frameEls = [];
+    curFrame = -1;
+    if (!list.length) { stage.classList.add("nobg"); bgImg.removeAttribute("src"); frames = []; fitSize(); return; }
+    list.forEach((f, i) => {
+      const el = i === 0 ? bgImg : document.createElement("img");
+      if (i > 0) { el.className = "bg layer off"; el.alt = ""; stage.insertBefore(el, tmr); }
+      else { el.className = "bg"; }
+      if (i === 0) {
+        el.onload = () => { stage.classList.remove("nobg"); fitSize(); };
+        el.onerror = () => { stage.classList.add("nobg"); fitSize(); };
+      }
+      el.src = f.src;
+      frameEls.push(el);
+    });
+    frames = list.map((f, i) => ({ src: f.src, ms: Math.max(30, num(f.ms, 1000)), el: frameEls[i] }));
+    updateFrame(true);
+  }
+  // reloj de la animación; window.__seek(ms) lo fija para render cuadro a cuadro
+  let seekMs = null;
+  window.__seek = (ms) => { seekMs = num(ms); updateFrame(true); };
+  function updateFrame(force) {
+    if (!frames.length) return;
+    let idx = 0;
+    if (frames.length > 1) {
+      const total = frames.reduce((a, f) => a + f.ms, 0);
+      let t = (seekMs != null ? seekMs : performance.now()) % total;
+      while (idx < frames.length - 1 && t >= frames[idx].ms) { t -= frames[idx].ms; idx++; }
+    }
+    if (idx === curFrame && !force) return;
+    curFrame = idx;
+    // la base (índice 0) siempre ocupa el espacio; solo se oculta con visibility
+    frames.forEach((f, i) => f.el && f.el.classList.toggle("off", i !== idx));
+    if (hooks.frame) hooks.frame(idx);
   }
 
   let lastText = "";
@@ -654,7 +717,7 @@
   if (BAKED) {
     style = { ...DEFAULT_STYLE, ...(BAKED.style || {}) };
     renderStyle();
-    setBg(BAKED.bg || "");
+    setFrames(BAKED.frames || (BAKED.bg ? [{ src: BAKED.bg, ms: 1000 }] : []));
   } else {
     onValue(styleRef, (snap) => {
       const v = snap.val();
@@ -663,11 +726,19 @@
       renderStyle();
       if (hooks.style) hooks.style();
     });
-    onValue(bgRef, (snap) => {
-      const v = snap.val() || "";
-      setBg(v);
-      if (hooks.bg) hooks.bg(v);
-    });
+    // frames: lista (orden + tiempos) e imágenes por separado, para que reordenar o
+    // cambiar un tiempo no vuelva a subir las imágenes
+    let fList = null, fData = null, legacyBg = "";
+    const applyFrames = () => {
+      if (fList === null || fData === null) return;
+      let list = fList.map((f) => ({ id: f.id, ms: f.ms, src: fData[f.id] })).filter((f) => f.src);
+      if (!list.length && legacyBg) list = [{ id: "_bg", ms: 1000, src: legacyBg }];
+      setFrames(list);
+      if (hooks.frames) hooks.frames(list);
+    };
+    onValue(frameListRef, (snap) => { const v = snap.val(); fList = Array.isArray(v) ? v.filter(Boolean) : (v ? Object.values(v) : []); applyFrames(); });
+    onValue(frameDataRef, (snap) => { fData = snap.val() || {}; applyFrames(); });
+    onValue(bgRef, (snap) => { legacyBg = snap.val() || ""; applyFrames(); });
   }
 
   let ircStarted = false;
@@ -685,6 +756,7 @@
   function tick() {
     const rem = currentRemaining();
     setText(fmt(rem));
+    if (seekMs == null) updateFrame(false);
     // Llegó a 0: se detiene con transacción y con la hora del servidor ya cargada.
     // Así una PC con el reloj adelantado no puede apagar el timer antes de tiempo,
     // y un sub que llega justo en el último segundo no se borra.
@@ -1380,26 +1452,120 @@
     }
     $("btnStyleReset").addEventListener("click", () => set(styleRef, DEFAULT_STYLE));
 
-    /* ---------------- imagen de fondo ---------------- */
-    hooks.bg = (v) => {
-      const input = $("bgUrl");
-      if (document.activeElement !== input) input.value = v.startsWith("data:") ? "" : v;
-      input.placeholder = v.startsWith("data:") ? "(imagen subida)" : "fondo-timer.png";
+    /* ---------------- imágenes del marco (secuencia) ---------------- */
+    let panelFrames = [];      // [{ id, ms, src }] como está en Firebase
+    const fmtSec = (ms) => (Math.round(ms / 10) / 100).toString();
+    function frameListOnly() { return panelFrames.filter((f) => f.id !== "_bg").map((f) => ({ id: f.id, ms: Math.round(f.ms) })); }
+    function renderFrameList() {
+      const box = $("frameList");
+      if (document.activeElement && box.contains(document.activeElement)) return; // no interrumpir mientras escribe
+      box.innerHTML = panelFrames.map((f, i) => `
+        <div class="frow" data-i="${i}">
+          <span class="fnum">${i + 1}</span>
+          <img class="fthumb" src="${esc(f.src)}" alt="">
+          <div class="fdur"><input type="number" class="nospin" min="0.03" step="0.05" value="${fmtSec(num(f.ms, 1000))}" data-dur="${i}"><span>seg</span></div>
+          <div class="fbtns">
+            <button class="ghost" data-up="${i}" title="Mover antes" ${i === 0 ? "disabled" : ""}>&#9650;</button>
+            <button class="ghost" data-down="${i}" title="Mover después" ${i === panelFrames.length - 1 ? "disabled" : ""}>&#9660;</button>
+            <button class="ghost danger" data-del="${i}">Quitar</button>
+          </div>
+        </div>`).join("");
+      renderCycle();
+      hooks.frame(curFrame);
+    }
+    function renderCycle() {
+      const total = panelFrames.reduce((a, f) => a + num(f.ms, 1000), 0);
+      $("cycleInfo").innerHTML = panelFrames.length > 1
+        ? `${panelFrames.length} imágenes · el ciclo completo dura <b>${fmtSec(total)} seg</b> y se repite`
+        : panelFrames.length === 1 ? "1 imagen: fondo fijo, sin animación" : "";
+    }
+    let framesSig = "";
+    hooks.frames = (list) => {
+      const sig = list.map((f) => f.id + ":" + f.ms + ":" + (f.src || "").length).join("|");
+      if (sig === framesSig) return;          // nada cambió: no redibujar
+      framesSig = sig;
+      panelFrames = list.map((f) => ({ ...f }));
+      renderFrameList();
     };
-    $("btnBgApply").addEventListener("click", () => set(bgRef, $("bgUrl").value.trim()));
-    $("btnBgClear").addEventListener("click", () => { $("bgUrl").value = ""; set(bgRef, ""); });
-    $("btnBgFile").addEventListener("click", () => $("bgFile").click());
-    $("bgFile").addEventListener("change", async (e) => {
-      const file = e.target.files[0];
+    hooks.frame = (idx) => {
+      document.querySelectorAll("#frameList .frow").forEach((r) => r.classList.toggle("now", Number(r.dataset.i) === idx && panelFrames.length > 1));
+    };
+
+    // migra el fondo único de versiones anteriores a la secuencia
+    get(frameListRef).then(async (ls) => {
+      if (ls.val()) return;
+      const b = (await get(bgRef)).val();
+      if (!b) return;
+      const id = "f" + Date.now().toString(36);
+      await update(ref(db), { ["frameData/" + id]: b, frameList: [{ id, ms: 1000 }], bg: null });
+    }).catch(() => {});
+
+    async function addFrameSrcs(srcs) {
+      const base = frameListOnly();
+      const upd = {};
+      srcs.forEach((src, k) => {
+        const id = "f" + Date.now().toString(36) + k + Math.random().toString(36).slice(2, 6);
+        upd["frameData/" + id] = src;
+        base.push({ id, ms: 1000 });
+      });
+      upd.frameList = base;
+      if (panelFrames.some((f) => f.id === "_bg")) upd.bg = null;   // ya no se usa el fondo viejo
+      await update(ref(db), upd);
+    }
+    $("btnAddFrames").addEventListener("click", () => $("frameFiles").click());
+    $("frameFiles").addEventListener("change", async (e) => {
+      const files = [...e.target.files].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
       e.target.value = "";
-      if (!file) return;
+      if (!files.length) return;
+      flash("styleFlash", "Subiendo " + files.length + " imagen(es)...");
       try {
-        const dataUrl = await compressImage(file, 1920);
-        if (dataUrl.length > 4 * 1024 * 1024) { flash("styleFlash", "La imagen es muy pesada. Usa una más chica o súbela como URL."); return; }
-        await set(bgRef, dataUrl);
-        flash("styleFlash", "Imagen subida.");
-      } catch (err) { flash("styleFlash", "No se pudo leer la imagen."); }
+        const srcs = [];
+        for (const f of files) {
+          // los GIF se guardan tal cual para no perder su animación
+          const src = f.type === "image/gif" ? await readAsDataURL(f) : await compressImage(f, 1920);
+          if (src.length > 6 * 1024 * 1024) { flash("styleFlash", `"${f.name}" es muy pesada. Usa una más chica.`); return; }
+          srcs.push(src);
+        }
+        await addFrameSrcs(srcs);
+        flash("styleFlash", files.length + " imagen(es) agregada(s).");
+      } catch (err) { flash("styleFlash", "No se pudo leer alguna imagen."); }
     });
+    $("btnAddFrameUrl").addEventListener("click", async () => {
+      const u = $("frameUrl").value.trim();
+      if (!u) return;
+      await addFrameSrcs([u]);
+      $("frameUrl").value = "";
+    });
+    function readAsDataURL(file) {
+      return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file); });
+    }
+
+    const box = $("frameList");
+    let durTimer = null;
+    box.addEventListener("input", (e) => {
+      const i = e.target.dataset.dur;
+      if (i == null) return;
+      const sec = Math.max(0.03, num(e.target.value, 1));
+      panelFrames[i].ms = Math.round(sec * 1000);
+      renderCycle();
+      clearTimeout(durTimer);
+      durTimer = setTimeout(() => set(frameListRef, frameListOnly()), 350);
+    });
+    box.addEventListener("focusout", () => setTimeout(renderFrameList, 400));
+    box.addEventListener("click", async (e) => {
+      const t = e.target.closest("button");
+      if (!t) return;
+      const list = frameListOnly();
+      if (t.dataset.up != null) { const i = +t.dataset.up; [list[i - 1], list[i]] = [list[i], list[i - 1]]; await set(frameListRef, list); }
+      else if (t.dataset.down != null) { const i = +t.dataset.down; [list[i + 1], list[i]] = [list[i], list[i + 1]]; await set(frameListRef, list); }
+      else if (t.dataset.del != null) {
+        const i = +t.dataset.del, f = panelFrames[i];
+        if (!confirm("¿Quitar la imagen " + (i + 1) + "?")) return;
+        if (f.id === "_bg") { await set(bgRef, null); return; }
+        await update(ref(db), { frameList: list.filter((x) => x.id !== f.id), ["frameData/" + f.id]: null });
+      }
+    });
+
     function compressImage(file, maxW) {
       return new Promise((resolve, reject) => {
         const url = URL.createObjectURL(file);
@@ -1439,7 +1605,7 @@
       const A = "/*PANEL-ONLY-" + "START*/", B = "/*PANEL-ONLY-" + "END*/";
       const i = js.indexOf(A), j = js.indexOf(B);
       if (i >= 0 && j > i) js = js.slice(0, i) + js.slice(j + B.length);
-      const baked = JSON.stringify({ style: st, bg }).replace(/</g, "\\u003c");
+      const baked = JSON.stringify({ style: st, frames: bg }).replace(/</g, "\\u003c");
       const fonts = $("fontsLink").outerHTML;
       return `<!DOCTYPE html>
 <html lang="es">
@@ -1459,9 +1625,9 @@ ${fonts}
     }
     $("btnDownload").addEventListener("click", async () => {
       flash("styleFlash", "Generando...");
-      const bgSnap = await get(bgRef);
-      const bg = await toDataURL(bgSnap.val() || "");
-      const blob = new Blob([buildOverlayHTML(style, bg)], { type: "text/html" });
+      const list = [];
+      for (const f of panelFrames) list.push({ src: await toDataURL(f.src), ms: Math.round(num(f.ms, 1000)) });
+      const blob = new Blob([buildOverlayHTML(style, list)], { type: "text/html" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = "overlay-timer-kiza.html";
