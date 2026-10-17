@@ -42,6 +42,7 @@
   .tmr .t-front { position: relative; }
 
   /* ============ OVERLAY (?display) ============ */
+  html.display, body.display { background: transparent !important; }
   body.display {
     background: transparent !important;
     height: 100vh; overflow: hidden;
@@ -619,6 +620,7 @@
   const tFront = tmr.querySelector(".t-front");
 
   if (DISPLAY) {
+    document.documentElement.classList.add("display");   // html también: si no, queda el fondo oscuro
     document.body.classList.add("display");
     document.body.appendChild(stage);
     const p = $("panel"); if (p) p.remove();
@@ -1608,7 +1610,7 @@
       const baked = JSON.stringify({ style: st, frames: bg }).replace(/</g, "\\u003c");
       const fonts = $("fontsLink").outerHTML;
       return `<!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="display">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
