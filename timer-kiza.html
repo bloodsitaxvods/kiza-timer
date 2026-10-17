@@ -183,6 +183,11 @@
   .qbtn .qn { font-size: 13px; letter-spacing: .04em; color: var(--text); }
   .qbtn .qv { font-size: 16px; color: var(--accent-2); letter-spacing: .02em; }
   .qbtn:hover { background: #14234a; }
+  /* cada botón con su color (--qc): borde, fondo teñido y valor */
+  .qbtn[style*="--qc"] { border-color: var(--qc); border-left-width: 4px;
+    background: color-mix(in srgb, var(--qc) 18%, var(--panel)); }
+  .qbtn[style*="--qc"]:hover { background: color-mix(in srgb, var(--qc) 32%, var(--panel)); border-color: var(--qc); }
+  .qbtn[style*="--qc"] .qv { color: color-mix(in srgb, var(--qc) 55%, #ffffff); }
 
   /* tiempo exacto HH : MM : SS */
   .hms-row { display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; }
@@ -222,7 +227,6 @@
   .hist-foot input { flex: 1; }
 
   /* donación */
-  .qbtn.don { border-color: #2E4C8C; }
 
 
   /* precios */
@@ -279,6 +283,9 @@
 
   .footer { text-align: center; font-size: 12px; color: var(--muted); margin-top: 20px; letter-spacing: 0.08em; }
   .footer a { color: var(--accent-2); }
+  .footer a.chip { display: inline-block; padding: 4px 12px; margin: 0 4px; border: 1px solid var(--accent-2); border-radius: 6px;
+    text-decoration: none; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; background: rgba(0,194,255,.08); }
+  .footer a.chip:hover { background: rgba(0,194,255,.18); }
 </style>
 </head>
 <body>
@@ -352,12 +359,12 @@
     <hr>
     <div class="sublabel">Sumar a mano un evento que no se contó</div>
     <div class="quick">
-      <button class="qbtn" data-quick="t1"><span class="qn">Sub Tier 1 / Prime</span><span class="qv" id="qT1v"></span></button>
-      <button class="qbtn" data-quick="t2"><span class="qn">Sub Tier 2</span><span class="qv" id="qT2v"></span></button>
-      <button class="qbtn" data-quick="t3"><span class="qn">Sub Tier 3</span><span class="qv" id="qT3v"></span></button>
-      <button class="qbtn" data-quick="follow"><span class="qn">Follow</span><span class="qv" id="qFollowv"></span></button>
-      <button class="qbtn don" data-quick="donation"><span class="qn">Donación 1 USD</span><span class="qv" id="qDonUsdv"></span></button>
-      <button class="qbtn don" data-quick="donationMxn"><span class="qn">Donación 20 MXN</span><span class="qv" id="qDonMxnv"></span></button>
+      <button class="qbtn" data-quick="t1" style="--qc:#2029ff"><span class="qn">Sub Tier 1 / Prime</span><span class="qv" id="qT1v"></span></button>
+      <button class="qbtn" data-quick="t2" style="--qc:#5860ff"><span class="qn">Sub Tier 2</span><span class="qv" id="qT2v"></span></button>
+      <button class="qbtn" data-quick="t3" style="--qc:#a7aaff"><span class="qn">Sub Tier 3</span><span class="qv" id="qT3v"></span></button>
+      <button class="qbtn" data-quick="follow" style="--qc:#ea83ff"><span class="qn">Follow</span><span class="qv" id="qFollowv"></span></button>
+      <button class="qbtn don" data-quick="donation" style="--qc:#529c4a"><span class="qn">Donación 1 USD</span><span class="qv" id="qDonUsdv"></span></button>
+      <button class="qbtn don" data-quick="donationMxn" style="--qc:#79a574"><span class="qn">Donación 20 MXN</span><span class="qv" id="qDonMxnv"></span></button>
     </div>
   </div>
 
@@ -420,7 +427,6 @@
     <summary class="title">Conexión Twitch <small>kizashi_saya</small><span class="chev">&rsaquo;</span></summary>
     <div class="sublabel">Quién está contando eventos ahora</div>
     <div class="conn-list" id="connList"></div>
-    <p class="hint">Cada panel y cada overlay abierto en OBS escucha el chat. Cada evento se cuenta una sola vez, sin importar cuántos estén abiertos.</p>
     <hr>
     <div class="sublabel">Follows</div>
     <div class="status" id="folStatus"><span class="dot"></span><span id="folText">SIN CONFIGURAR</span></div>
@@ -429,7 +435,6 @@
       <button class="fit primary" id="btnAuth">AUTORIZAR</button>
       <button class="fit ghost" id="btnFolOff">Quitar</button>
     </div>
-    <p class="hint">Inicia sesión con una cuenta que sea <b>mod</b> de kizashi_saya (o la suya). Solo un panel u overlay a la vez escucha los follows; si se cierra, otro toma el relevo solo. Redirect URL de la app: <code id="redirectHint"></code></p>
   </details>
 
   <!-- ESTILO -->
@@ -477,13 +482,12 @@
     </div>
     <div class="row" style="margin-top:16px;">
       <button class="ghost" id="btnStyleReset">Restablecer estilo</button>
-      <button class="primary" id="btnDownload">DESCARGAR OVERLAY</button>
     </div>
     <div class="flash" id="styleFlash"></div>
-    <p class="hint">Los cambios se ven en vivo en el overlay <code>?display</code>. Descargar genera un HTML solo con el timer y este estilo fijo; también cuenta eventos.</p>
+    <p class="hint">Los cambios se ven en vivo en el overlay de OBS.</p>
   </details>
 
-  <div class="footer">Overlay para OBS: <a id="displayLink" href="?display" target="_blank">?display</a> · fondo transparente</div>
+  <div class="footer">Overlay para OBS: <a id="displayLink" class="chip" href="?display" target="_blank">display</a> · fondo transparente</div>
 </div>
 
 <!-- HISTORIAL (derecha) -->
@@ -1359,7 +1363,6 @@
 
     /* ---------------- follows: autorización ---------------- */
     const REDIRECT = location.origin + location.pathname;
-    $("redirectHint").textContent = REDIRECT;
 
     if (location.hash.includes("access_token=")) {
       const t = new URLSearchParams(location.hash.slice(1)).get("access_token");
@@ -1655,57 +1658,7 @@
       });
     }
 
-    /* ---------------- descarga del overlay ----------------
-       Genera un HTML con el mismo motor (cuenta eventos, sin doble suma)
-       pero sin el panel y con el estilo actual fijo. */
-    async function toDataURL(src) {
-      if (!src || src.startsWith("data:")) return src;
-      try {
-        const r = await fetch(src);
-        if (!r.ok) throw 0;
-        const b = await r.blob();
-        return await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(b); });
-      } catch (e) {
-        return new URL(src, location.href).href;
-      }
-    }
-    function buildOverlayHTML(st, bg) {
-      const S = "script";
-      const css = document.querySelector("style").textContent;
-      let js = document.querySelector('script[type="module"]').textContent;
-      const A = "/*PANEL-ONLY-" + "START*/", B = "/*PANEL-ONLY-" + "END*/";
-      const i = js.indexOf(A), j = js.indexOf(B);
-      if (i >= 0 && j > i) js = js.slice(0, i) + js.slice(j + B.length);
-      const baked = JSON.stringify({ style: st, frames: bg }).replace(/</g, "\\u003c");
-      const fonts = $("fontsLink").outerHTML;
-      return `<!DOCTYPE html>
-<html lang="es" class="display">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Overlay Timer kizashi_saya</title>
-${fonts}
-<style>${css}</style>
-</head>
-<body class="display">
-<div class="stage nobg" id="stage"><img class="bg" id="bgImg" alt=""><div class="tmr" id="tmr"><span class="t-back">00:00:00</span><span class="t-front">00:00:00</span></div></div>
-<${S}>window.__OVERLAY = ${baked};</${S}>
-<${S} type="module">${js}</${S}>
-</body>
-</html>`;
-    }
-    $("btnDownload").addEventListener("click", async () => {
-      flash("styleFlash", "Generando...");
-      const list = [];
-      for (const f of panelFrames) list.push({ src: await toDataURL(f.src), ms: Math.round(num(f.ms, 1000)) });
-      const blob = new Blob([buildOverlayHTML(style, list)], { type: "text/html" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "overlay-timer-kiza.html";
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-      flash("styleFlash", "Overlay descargado.");
-    });
+
 
     $("displayLink").href = location.pathname + "?display";
   }
