@@ -1108,6 +1108,17 @@
       followConnect();
     }
   }, 5000);
+  // Twitch pide revisar el permiso cada hora: si venció o lo revocaron, se avisa en el panel.
+  setInterval(async () => {
+    if (!isLeader || !cfg.token) return;
+    try {
+      const vr = await fetch("https://id.twitch.tv/oauth2/validate", { headers: { Authorization: "OAuth " + cfg.token } });
+      if (vr.status === 401) {
+        setFollowStatus("login vencido, autoriza de nuevo", "err");
+        update(configRef, { token: null });
+      }
+    } catch (e) {}
+  }, 60 * 60 * 1000);
 
   function followStop() {
     esGen++;
