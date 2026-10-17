@@ -265,6 +265,15 @@
   .cycle b { color: var(--accent-2); }
   @media (max-width: 560px) { .frow { grid-template-columns: 26px 1fr; } .frow .fdur, .frow .fbtns { grid-column: 1 / -1; } }
 
+  .anim-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .anim-btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; }
+  .anim-btn svg { width: 16px; height: 16px; fill: currentColor; }
+  .anim-btn .i-play { display: none; }
+  .anim-btn.paused { border-color: var(--warn); color: var(--warn); }
+  .anim-btn.paused .i-play { display: inline; }
+  .anim-btn.paused .i-pause { display: none; }
+  .frow .fthumb { cursor: pointer; }
+
   /* conexiones */
   .conn-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
 
@@ -426,7 +435,14 @@
   <!-- ESTILO -->
   <details class="block">
     <summary class="title">Estilo del overlay <small>imágenes, colores y posición</small><span class="chev">&rsaquo;</span></summary>
-    <div class="sublabel">Imágenes del marco · se muestran en orden y se repiten</div>
+    <div class="anim-head">
+      <div class="sublabel" style="margin:0;">Imágenes del marco · se muestran en orden y se repiten</div>
+      <button class="anim-btn" id="btnAnim" title="Pausar o reproducir la animación en este panel">
+        <svg class="i-pause" viewBox="0 0 24 24"><rect x="5" y="4" width="5" height="16" rx="1.5"/><rect x="14" y="4" width="5" height="16" rx="1.5"/></svg>
+        <svg class="i-play" viewBox="0 0 24 24"><path d="M7 4.2v15.6c0 .8.9 1.3 1.6.9l12-7.8c.6-.4.6-1.4 0-1.8l-12-7.8C7.9 2.9 7 3.4 7 4.2z"/></svg>
+        <span id="animLabel">PAUSAR</span>
+      </button>
+    </div>
     <div class="frame-list" id="frameList"></div>
     <div class="cycle" id="cycleInfo"></div>
     <div class="row">
@@ -435,7 +451,7 @@
       <button class="fit" id="btnAddFrameUrl">AGREGAR URL</button>
     </div>
     <input type="file" id="frameFiles" accept="image/*" multiple hidden>
-    <p class="hint">Una imagen = fondo fijo. Varias = animación: 1, 2, 3 y vuelve a la 1, cada una con su tiempo. Puedes elegir varias a la vez; se ordenan por nombre de archivo. También acepta GIF animado, pero un PNG tiene bordes más limpios.</p>
+    <p class="hint">La pausa solo afecta a la vista de este panel; en OBS la animación sigue. Con la animación en pausa, toca una miniatura para ver esa imagen. Una imagen = fondo fijo. Varias = animación: 1, 2, 3 y vuelve a la 1, cada una con su tiempo. Puedes elegir varias a la vez; se ordenan por nombre de archivo. También acepta GIF animado, pero un PNG tiene bordes más limpios.</p>
     <hr>
     <div class="grid3">
       <div class="field"><label>Color número</label><input type="color" id="stColor"></div>
@@ -678,10 +694,18 @@
       frameEls.push(el);
     });
     frames = list.map((f, i) => ({ src: f.src, ms: Math.max(30, num(f.ms, 1000)), el: frameEls[i] }));
-    updateFrame(true);
+    if (animHold != null) showFrame(animHold); else updateFrame(true);
   }
   // reloj de la animación; window.__seek(ms) lo fija para render cuadro a cuadro
   let seekMs = null;
+  let animHold = null;   // índice fijo cuando la animación está en pausa (solo vista del panel)
+  function showFrame(idx) {
+    if (!frames.length) return;
+    idx = Math.max(0, Math.min(frames.length - 1, idx));
+    curFrame = idx;
+    frames.forEach((f, i) => f.el && f.el.classList.toggle("off", i !== idx));
+    if (hooks.frame) hooks.frame(idx);
+  }
   window.__seek = (ms) => { seekMs = num(ms); updateFrame(true); };
   function updateFrame(force) {
     if (!frames.length) return;
@@ -759,7 +783,7 @@
   function tick() {
     const rem = currentRemaining();
     setText(fmt(rem));
-    if (seekMs == null) updateFrame(false);
+    if (seekMs == null && animHold == null) updateFrame(false);
     // Llegó a 0: se detiene con transacción y con la hora del servidor ya cargada.
     // Así una PC con el reloj adelantado no puede apagar el timer antes de tiempo,
     // y un sub que llega justo en el último segundo no se borra.
@@ -1491,7 +1515,8 @@
     function frameListOnly() { return panelFrames.filter((f) => f.id !== "_bg").map((f) => ({ id: f.id, ms: Math.round(f.ms) })); }
     function renderFrameList() {
       const box = $("frameList");
-      if (document.activeElement && box.contains(document.activeElement)) return; // no interrumpir mientras escribe
+      const ae = document.activeElement;
+      if (ae && box.contains(ae) && ae.tagName === "INPUT") return;   // no interrumpir mientras escribe un tiempo
       box.innerHTML = panelFrames.map((f, i) => `
         <div class="frow" data-i="${i}">
           <span class="fnum">${i + 1}</span>
@@ -1520,6 +1545,13 @@
       panelFrames = list.map((f) => ({ ...f }));
       renderFrameList();
     };
+    function setAnimPaused(paused, idx) {
+      if (paused) { animHold = idx != null ? idx : Math.max(0, curFrame); showFrame(animHold); }
+      else { animHold = null; updateFrame(true); }
+      $("btnAnim").classList.toggle("paused", paused);
+      $("animLabel").textContent = paused ? "REPRODUCIR" : "PAUSAR";
+    }
+    $("btnAnim").addEventListener("click", () => setAnimPaused(animHold == null));
     hooks.frame = (idx) => {
       document.querySelectorAll("#frameList .frow").forEach((r) => r.classList.toggle("now", Number(r.dataset.i) === idx && panelFrames.length > 1));
     };
@@ -1586,8 +1618,14 @@
     });
     box.addEventListener("focusout", () => setTimeout(renderFrameList, 400));
     box.addEventListener("click", async (e) => {
+      const row = e.target.closest(".frow");
+      if (e.target.classList.contains("fthumb") && row) {   // clic en la miniatura: pausa y muestra esa imagen
+        setAnimPaused(true, Number(row.dataset.i));
+        return;
+      }
       const t = e.target.closest("button");
       if (!t) return;
+      t.blur();
       const list = frameListOnly();
       if (t.dataset.up != null) { const i = +t.dataset.up; [list[i - 1], list[i]] = [list[i], list[i - 1]]; await set(frameListRef, list); }
       else if (t.dataset.down != null) { const i = +t.dataset.down; [list[i + 1], list[i]] = [list[i], list[i + 1]]; await set(frameListRef, list); }
