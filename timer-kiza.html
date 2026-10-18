@@ -20,6 +20,8 @@
     --ok: #2BD67B;
     --danger: #FF4D6D;
     --warn: #FF9F2E;
+    --x2: #3D8BFF;
+    --boost: #FF2B3A;
     --mono: "Consolas", "SFMono-Regular", "DejaVu Sans Mono", monospace;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -40,6 +42,17 @@
   .tmr span { display: block; }
   .tmr .t-back { position: absolute; inset: 0; }
   .tmr .t-front { position: relative; }
+  /* contador del doble tiempo, debajo del timer principal */
+  .tmr2 { position: absolute; transform: translate(-50%, 0); white-space: nowrap; line-height: 1;
+    font-variant-numeric: tabular-nums; display: none; }
+  .tmr2.show { display: block; }
+  .tmr2 > span { display: block; }
+  /* etiqueta "x2": 75 % más grande que el tiempo y con más separación */
+  .tmr2 .x2l { display: inline-block; font-size: 1.75em; vertical-align: middle; margin-right: 0.45em; }
+  .tmr2 .x2t { display: inline-block; vertical-align: middle; }
+  .tmr2 .t-back { position: absolute; inset: 0; color: #FFFFFF; -webkit-text-stroke: 0.16em #FFFFFF;
+    text-shadow: 0 0 0.25em rgba(0,0,0,.85), 0 0 0.5em rgba(0,0,0,.6); }
+  .tmr2 .t-front { position: relative; color: #E3101F; }
 
   /* ============ OVERLAY (?display) ============ */
   html.display, body.display { background: transparent !important; }
@@ -278,6 +291,27 @@
   .anim-btn.paused .i-pause { display: none; }
   .frow .fthumb { cursor: pointer; }
 
+  /* doble tiempo */
+  .boost-block { border-color: rgba(255,43,58,.55); background: linear-gradient(180deg, #230b12 0%, var(--panel) 75%); }
+  .boost-block > .block-head .title::before { background: var(--boost); box-shadow: 0 0 10px var(--boost); }
+  .boost-top { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+  .boost-clock { font-size: 40px; font-weight: 700; color: var(--boost); font-variant-numeric: tabular-nums; min-width: 150px; letter-spacing: .04em; }
+  .boost-ctrl { flex: 1; min-width: 280px; }
+  .boost-ctrl .pin input { width: 80px; }
+  .boost-go { background: var(--boost); border-color: var(--boost); color: #fff; }
+  .boost-go:hover { background: #ff5361; }
+  #btnBoostShow.on { border-color: var(--boost); color: #ffb3b9; background: rgba(255,43,58,.12); }
+  .boost-cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  @media (max-width: 700px) { .boost-cats { grid-template-columns: 1fr 1fr; } }
+  .rcheck { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border-radius: 9px; cursor: pointer;
+    background: var(--bg); border: 1px solid #4a1d26; font-size: 13px; color: var(--text); }
+  .rcheck input { accent-color: var(--boost); width: 17px; height: 17px; }
+  .rcheck:has(input:checked) { border-color: var(--boost); background: rgba(255,43,58,.12); }
+  #boostStatus.live { color: var(--boost); }
+  #boostStatus.live .dot { background: var(--boost); box-shadow: 0 0 8px var(--boost); }
+  .hrow.x2 { border-left-color: var(--x2); background: rgba(61,139,255,.08); }
+  .hrow.x2 .hd { color: var(--x2); }
+
   /* conexiones */
   .conn-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
 
@@ -303,6 +337,7 @@
     <div class="stage nobg" id="stage">
       <img class="bg" id="bgImg" alt="">
       <div class="tmr" id="tmr"><span class="t-back">00:00:00</span><span class="t-front">00:00:00</span></div>
+      <div class="tmr2" id="tmr2"><span class="t-back"><span class="x2l">x2</span><span class="x2t">00:00</span></span><span class="t-front"><span class="x2l">x2</span><span class="x2t">00:00</span></span></div>
     </div>
   </div>
 
@@ -366,6 +401,38 @@
       <button class="qbtn don" data-quick="donation" style="--qc:#529c4a"><span class="qn">Donación 1 USD</span><span class="qv" id="qDonUsdv"></span></button>
       <button class="qbtn don" data-quick="donationMxn" style="--qc:#79a574"><span class="qn">Donación 20 MXN</span><span class="qv" id="qDonMxnv"></span></button>
     </div>
+  </div>
+
+  <!-- DOBLE TIEMPO -->
+  <div class="block boost-block" id="boostBlock">
+    <div class="block-head">
+      <div class="title">Doble tiempo x2 <small>lo marcado suma el doble mientras corre este contador</small></div>
+      <div class="status" id="boostStatus"><span class="dot"></span><span id="boostText">INACTIVO</span></div>
+    </div>
+    <div class="boost-top">
+      <div class="boost-clock" id="boostClock">00:00</div>
+      <div class="boost-ctrl">
+        <div class="row">
+          <div class="pin"><input type="number" class="nospin" id="boostMin" min="1" step="1" value="10"><span>min</span></div>
+          <button class="fit" id="btnBoostSet">PONER</button>
+          <button class="fit boost-go" id="btnBoostPlay">PLAY</button>
+          <button class="fit" id="btnBoostPause">PAUSA</button>
+          <button class="fit ghost" id="btnBoostShow">MOSTRAR EN OVERLAY</button>
+        </div>
+      </div>
+    </div>
+    <div class="sublabel" style="margin-top:16px;">Qué cuenta doble</div>
+    <div class="boost-cats">
+      <label class="rcheck"><input type="checkbox" data-bcat="t1"> Sub Tier 1 / Prime</label>
+      <label class="rcheck"><input type="checkbox" data-bcat="t2"> Sub Tier 2</label>
+      <label class="rcheck"><input type="checkbox" data-bcat="t3"> Sub Tier 3</label>
+      <label class="rcheck"><input type="checkbox" data-bcat="bits"> Bits</label>
+      <label class="rcheck"><input type="checkbox" data-bcat="follow"> Follows</label>
+      <label class="rcheck"><input type="checkbox" data-bcat="raid"> Raids</label>
+      <label class="rcheck"><input type="checkbox" data-bcat="donation"> Donación USD</label>
+      <label class="rcheck"><input type="checkbox" data-bcat="donationMxn"> Donación MXN</label>
+    </div>
+    <p class="hint">Solo cuenta doble mientras el contador está en marcha; en pausa o en 0 todo vuelve a lo normal. Los botones de "Sumar a mano un evento" también respetan el x2. Agregar o quitar tiempo a mano nunca se duplica.</p>
   </div>
 
   <!-- PRECIOS -->
@@ -495,7 +562,7 @@
   <div class="block hist-card">
     <div class="block-head">
       <div class="title">Historial</div>
-      <div class="legend"><span><i style="background:var(--ok)"></i>Automático</span><span><i style="background:var(--danger)"></i>Manual</span><span><i style="background:var(--warn)"></i>No contado</span></div>
+      <div class="legend"><span><i style="background:var(--ok)"></i>Automático</span><span><i style="background:var(--danger)"></i>Manual</span><span><i style="background:var(--warn)"></i>No contado</span><span><i style="background:var(--x2)"></i>Doble x2</span></div>
     </div>
     <div class="hist" id="hist"></div>
     <div class="hist-foot">
@@ -546,6 +613,7 @@
   //   /followLeader, /followStatus  quién escucha los follows
   const timerRef  = ref(db, "timer");
   const pricesRef = ref(db, "prices");
+  const boostRef  = ref(db, "boost");   // { isRunning, endTime, remainingMs, visible, cats: { t1: true, ... } }
   const styleRef  = ref(db, "style");
   const bgRef     = ref(db, "bg");          // fondo de versiones anteriores (se migra a frames)
   const frameListRef = ref(db, "frameList"); // [{ id, ms }] orden y duración
@@ -648,7 +716,17 @@
 
   function fitSize() {
     const w = stage.clientWidth || window.innerWidth;
-    tmr.style.fontSize = (w * style.size / 100) + "px";
+    const fs = w * style.size / 100;
+    tmr.style.fontSize = fs + "px";
+    const t2 = $("tmr2");
+    if (t2) {
+      t2.style.fontSize = (fs * 0.55) + "px";
+      t2.style.left = style.x + "%";
+      t2.style.top = `calc(${style.y}% + ${fs * 0.62}px)`;
+      t2.style.fontFamily = FONTS[style.font] || FONTS.orbitron;
+      t2.style.fontWeight = FONT_WEIGHT[style.font] || 400;
+      t2.style.letterSpacing = (style.spacing / 100) + "em";
+    }
   }
   new ResizeObserver(fitSize).observe(stage);
 
@@ -782,12 +860,52 @@
     if (!ircStarted) { ircStarted = true; ircConnect(); }  // no escuchar Twitch sin precios cargados
   });
 
+  /* ================= DOBLE TIEMPO x2 ================= */
+  let boost = { isRunning: false, endTime: 0, remainingMs: 0, visible: false, cats: {} };
+  onValue(boostRef, (snap) => {
+    const v = snap.val() || {};
+    boost = { isRunning: !!v.isRunning, endTime: num(v.endTime), remainingMs: num(v.remainingMs), visible: !!v.visible, cats: v.cats || {} };
+    if (hooks.boost) hooks.boost();
+  });
+  const boostRemaining = () => boost.isRunning ? Math.max(0, boost.endTime - now()) : Math.max(0, boost.remainingMs);
+  const boostActive = () => boost.isRunning && boost.endTime - now() > 0;
+  // categoría de cada evento; x2 solo si el contador corre y esa categoría está marcada
+  const mult = (cat) => (cat && boostActive() && boost.cats[cat]) ? 2 : 1;
+  const planCat = (plan) => ({ "2000": "t2", "3000": "t3" }[String(plan)] || "t1");
+  function fmtBoost(ms) {
+    const t = Math.ceil(Math.max(0, ms) / 1000);
+    const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+    const p = (n) => String(n).padStart(2, "0");
+    return h ? `${h}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`;
+  }
+  const tmr2 = $("tmr2");
+  const t2Times = tmr2.querySelectorAll(".x2t");
+  let lastT2 = "", lastBoostZero = -1e9;
+  function renderBoost() {
+    const rem = boostRemaining();
+    const show = boost.visible && (boost.isRunning || rem > 0);
+    tmr2.classList.toggle("show", show);
+    if (show) {
+      const t = fmtBoost(rem);
+      if (t !== lastT2) { lastT2 = t; t2Times.forEach((el) => { el.textContent = t; }); }
+    }
+    // llegó a 0: se detiene (una sola instancia lo registra)
+    if (boost.isRunning && rem <= 0 && offsetLoaded && performance.now() - lastBoostZero > 2000) {
+      lastBoostZero = performance.now();
+      runTransaction(boostRef, (cur) => {
+        if (!cur || !cur.isRunning || num(cur.endTime) - now() > 0) return;
+        return { ...cur, isRunning: false, remainingMs: 0, endTime: 0 };
+      }).then((res) => { if (res && res.committed) addHistory("x2", "Doble tiempo terminado: todo vuelve a lo normal", null); }).catch(() => {});
+    }
+  }
+
   /* ================= LOOP ================= */
   let lastStatus = 0, lastZeroTry = -1e9;
   function tick() {
     const rem = currentRemaining();
     setText(fmt(rem));
     if (seekMs == null && animHold == null) updateFrame(false);
+    renderBoost();
     // Llegó a 0: se detiene con transacción y con la hora del servidor ya cargada.
     // Así una PC con el reloj adelantado no puede apagar el timer antes de tiempo,
     // y un sub que llega justo en el último segundo no se borra.
@@ -855,7 +973,7 @@
     const entry = { ts: now(), kind, text };
     if (note) entry.note = note;
     if (deltaMs != null) entry.delta = Math.round(deltaMs);
-    if (kind === "manual") entry.by = whereLabel();
+    if (kind === "manual" || kind === "manual-x2" || kind === "x2") entry.by = whereLabel();
     push(historyRef, entry).catch(() => {});
   }
 
@@ -872,10 +990,12 @@
     } catch (e) { return false; }
   }
 
-  async function countEvent(lockPath, seconds, text, note) {
+  async function countEvent(lockPath, seconds, text, note, cat) {
     if (!seconds || seconds <= 0) return;
     if (!(await claim(lockPath))) return;
-    const ms = Math.round(seconds * 1000);
+    const m = mult(cat);
+    if (m > 1) text += " · x2";
+    const ms = Math.round(seconds * m * 1000);
     let applied;
     try {
       applied = await applyDelta(ms, true);
@@ -884,7 +1004,7 @@
       set(ref(db, lockPath), null).catch(() => {});
       return;
     }
-    if (applied) addHistory("auto", text, ms, note);
+    if (applied) addHistory(m > 1 ? "auto-x2" : "auto", text, ms, note);
     else addHistory("skip", text, ms, "No sumó: el timer ya había terminado");
   }
 
@@ -950,7 +1070,7 @@
     if (cmd === "PRIVMSG" && tags.bits) {
       const bits = parseInt(tags.bits, 10);
       if (bits > 0 && prices.bitsPer100 > 0) {
-        countEvent(lock, (bits / 100) * prices.bitsPer100, `${bits} bits de ${user}`);
+        countEvent(lock, (bits / 100) * prices.bitsPer100, `${bits} bits de ${user}`, "", "bits");
       }
       return;
     }
@@ -961,7 +1081,7 @@
       case "resub": {
         const plan = tags["msg-param-sub-plan"];
         const months = parseInt(tags["msg-param-multimonth-duration"], 10) || 1;
-        countEvent(lock, secondsForPlan(plan), `Sub ${planLabel(plan)} de ${user}`, multiNote(months));
+        countEvent(lock, secondsForPlan(plan), `Sub ${planLabel(plan)} de ${user}`, multiNote(months), planCat(plan));
         return;
       }
       case "subgift":
@@ -969,7 +1089,7 @@
         const plan = tags["msg-param-sub-plan"];
         const to = tags["msg-param-recipient-display-name"] || "";
         const months = parseInt(tags["msg-param-gift-months"], 10) || 1;
-        countEvent(lock, secondsForPlan(plan), `Sub ${planLabel(plan)} regalado por ${user}${to ? " a " + to : ""}`, multiNote(months));
+        countEvent(lock, secondsForPlan(plan), `Sub ${planLabel(plan)} regalado por ${user}${to ? " a " + to : ""}`, multiNote(months), planCat(plan));
         return;
       }
       // sigue pagando un sub que le regalaron = resub
@@ -977,13 +1097,13 @@
       case "anongiftpaidupgrade": {
         const plan = tags["msg-param-sub-plan"] || "1000";
         const from = unesc(tags["msg-param-sender-name"]) || "";
-        countEvent(lock, secondsForPlan(plan), `Sub ${planLabel(plan)} de ${user} (sigue pagando el sub que le regaló${from ? " " + from : "ron"})`);
+        countEvent(lock, secondsForPlan(plan), `Sub ${planLabel(plan)} de ${user} (sigue pagando el sub que le regaló${from ? " " + from : "ron"})`, "", planCat(plan));
         return;
       }
       // pasó de Prime a sub pagado = resub
       case "primepaidupgrade": {
         const plan = tags["msg-param-sub-plan"] || "1000";
-        countEvent(lock, secondsForPlan(plan), `Sub ${planLabel(plan)} de ${user} (pasó de Prime a pagado)`);
+        countEvent(lock, secondsForPlan(plan), `Sub ${planLabel(plan)} de ${user} (pasó de Prime a pagado)`, "", planCat(plan));
         return;
       }
       // submysterygift es solo el anuncio; cada regalo llega aparte como subgift
@@ -993,7 +1113,7 @@
         if (viewers < prices.raidMin) return;
         const raider = unesc(tags["msg-param-displayName"]) || user;
         const sec = num(prices.raidBase) + viewers * num(prices.raidPerViewer);
-        countEvent(lock, sec, `Raid de ${raider} con ${viewers} viewers`);
+        countEvent(lock, sec, `Raid de ${raider} con ${viewers} viewers`, "", "raid");
         return;
       }
       default: return;
@@ -1214,7 +1334,7 @@
   function onFollow(ev) {
     if (!prices.followOn) return;
     // la llave es el user_id: cada persona suma una sola vez
-    countEvent("follows/" + safeKey(ev.user_id), num(prices.follow), `Follow de ${ev.user_name || ev.user_login}`);
+    countEvent("follows/" + safeKey(ev.user_id), num(prices.follow), `Follow de ${ev.user_name || ev.user_login}`, "", "follow");
   }
 
   /*PANEL-ONLY-START*/
@@ -1293,13 +1413,69 @@
       });
     });
 
+    /* ---------------- doble tiempo x2 ---------------- */
+    hooks.boost = () => {
+      document.querySelectorAll("[data-bcat]").forEach((c) => { c.checked = !!boost.cats[c.dataset.bcat]; });
+      $("btnBoostShow").classList.toggle("on", boost.visible);
+      $("btnBoostShow").textContent = boost.visible ? "OCULTAR DEL OVERLAY" : "MOSTRAR EN OVERLAY";
+      updateQuickLabels();
+    };
+    setInterval(() => {
+      const rem = boostRemaining(), live = boostActive();
+      $("boostClock").textContent = fmtBoost(rem);
+      $("boostStatus").classList.toggle("live", live);
+      $("boostText").textContent = live ? "ACTIVO · cuenta doble" : rem > 0 ? "EN PAUSA · no cuenta doble" : "INACTIVO";
+    }, 250);
+    document.querySelectorAll("[data-bcat]").forEach((c) => {
+      c.addEventListener("change", () => { update(boostRef, { ["cats/" + c.dataset.bcat]: c.checked }); updateQuickLabels(); });
+    });
+    $("btnBoostSet").addEventListener("click", async () => {
+      const min = Math.max(0, num($("boostMin").value));
+      if (!min) { $("boostMin").focus(); return; }
+      const ms = Math.round(min * 60000);
+      await runTransaction(boostRef, (cur) => {
+        cur = cur || {};
+        return cur.isRunning ? { ...cur, endTime: now() + ms, remainingMs: ms } : { ...cur, isRunning: false, endTime: 0, remainingMs: ms };
+      });
+      addHistory("x2", `Doble tiempo puesto en ${min} min`, null);
+    });
+    $("btnBoostPlay").addEventListener("click", async () => {
+      let started = false, mins = 0;
+      await runTransaction(boostRef, (cur) => {
+        cur = cur || {};
+        started = false;
+        if (cur.isRunning) return cur;
+        let rem = Math.max(0, num(cur.remainingMs));
+        if (rem <= 0) rem = Math.round(Math.max(0, num($("boostMin").value)) * 60000);  // sin tiempo puesto: usa la casilla
+        if (rem <= 0) return cur;
+        started = true; mins = Math.round(rem / 60000 * 10) / 10;
+        return { ...cur, isRunning: true, endTime: now() + rem, remainingMs: rem };
+      });
+      if (started) {
+        const on = Object.keys(boost.cats).filter((k) => boost.cats[k]);
+        addHistory("x2", `Doble tiempo activado (${fmtBoost(boostRemaining())})` + (on.length ? "" : " · ojo: no hay nada marcado"), null);
+      }
+    });
+    $("btnBoostPause").addEventListener("click", async () => {
+      let did = false;
+      await runTransaction(boostRef, (cur) => {
+        did = false;
+        if (!cur || !cur.isRunning) return;
+        did = true;
+        return { ...cur, isRunning: false, remainingMs: Math.max(0, num(cur.endTime) - now()), endTime: 0 };
+      });
+      if (did) addHistory("x2", "Doble tiempo en pausa", null);
+    });
+    $("btnBoostShow").addEventListener("click", () => update(boostRef, { visible: !boost.visible }));
+
     const quickNames = { t1: "Sub Tier 1 sumado a mano", t2: "Sub Tier 2 sumado a mano", t3: "Sub Tier 3 sumado a mano", follow: "Follow sumado a mano", donation: "Donación PayPal de 1 USD", donationMxn: "Donación PayPal de 20 MXN" };
     document.querySelectorAll("[data-quick]").forEach((b) => {
       b.addEventListener("click", async () => {
-        const sec = num(prices[b.dataset.quick]);
+        const k = b.dataset.quick, m = mult(k);
+        const sec = num(prices[k]) * m;
         if (sec <= 0) return;
         await applyDelta(sec * 1000);
-        addHistory("manual", quickNames[b.dataset.quick], sec * 1000);
+        addHistory(m > 1 ? "manual-x2" : "manual", quickNames[k] + (m > 1 ? " · x2" : ""), sec * 1000);
       });
     });
 
@@ -1345,10 +1521,11 @@
       snap.forEach((c) => { rows.push(c.val()); });
       rows.reverse();
       histEl.innerHTML = rows.map((h) => {
-        const kind = ({ manual: "manual", skip: "skip", end: "skip" })[h.kind] || "auto";
+        const kind = ({ manual: "manual", skip: "skip", end: "skip", "auto-x2": "x2", "manual-x2": "x2", x2: "x2" })[h.kind] || "auto";
         let d = "";
         if (h.kind === "skip") d = "no sumó";
         else if (h.kind === "end") d = "FIN";
+        else if (h.kind === "x2") d = "x2";
         else if (h.delta != null) d = (h.delta >= 0 ? "+" : "-") + fmtDur(h.delta / 1000);
         const by = h.by ? `<em>${esc(h.by)}</em>` : "";
         const note = h.note ? `<span class="hn">${esc(h.note)}</span>` : "";
@@ -1464,6 +1641,10 @@
       $("qFollowv").textContent = "+ " + fmtDur(prices.follow);
       $("qDonUsdv").textContent = "+ " + fmtDur(prices.donation);
       $("qDonMxnv").textContent = "+ " + fmtDur(prices.donationMxn);
+      // con x2 activo y la categoría marcada, el botón muestra el valor doble
+      [["t1", "qT1v"], ["t2", "qT2v"], ["t3", "qT3v"], ["follow", "qFollowv"], ["donation", "qDonUsdv"], ["donationMxn", "qDonMxnv"]].forEach(([k, id]) => {
+        if (mult(k) > 1) $(id).textContent = "+ " + fmtDur(num(prices[k]) * 2) + "  (x2)";
+      });
     }
     let priceDirty = false;
     let firstPrices = true;
