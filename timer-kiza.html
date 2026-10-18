@@ -546,6 +546,8 @@
       <div class="field"><label>Posición X <b id="vX"></b></label><input type="range" id="stX" min="0" max="100" step="0.5"></div>
       <div class="field"><label>Posición Y <b id="vY"></b></label><input type="range" id="stY" min="0" max="100" step="0.5"></div>
       <div class="field"><label>Espaciado <b id="vSpacing"></b></label><input type="range" id="stSpacing" min="-10" max="30" step="1"></div>
+      <div class="field"><label>Tamaño del x2 <b id="vX2Size"></b>%</label><input type="range" id="stX2Size" min="20" max="150" step="1"></div>
+      <div class="field"><label>Separación del x2 <b id="vX2Gap"></b></label><input type="range" id="stX2Gap" min="0" max="200" step="1"></div>
     </div>
     <div class="row" style="margin-top:16px;">
       <button class="ghost" id="btnStyleReset">Restablecer estilo</button>
@@ -657,7 +659,8 @@
   const DEFAULT_STYLE = {
     color: "#FFFFFF", stroke: "#0A1A3A", strokeW: 6,
     glow: "#2F7BFF", glowSize: 18,
-    font: "orbitron", size: 12, x: 50, y: 50, spacing: 4
+    font: "orbitron", size: 12, x: 50, y: 50, spacing: 4,
+    x2Size: 55, x2Gap: 62     // x2: % del tamaño del timer principal y distancia debajo de él
   };
   let style = { ...DEFAULT_STYLE };
 
@@ -720,9 +723,9 @@
     tmr.style.fontSize = fs + "px";
     const t2 = $("tmr2");
     if (t2) {
-      t2.style.fontSize = (fs * 0.55) + "px";
+      t2.style.fontSize = (fs * num(style.x2Size, 55) / 100) + "px";
       t2.style.left = style.x + "%";
-      t2.style.top = `calc(${style.y}% + ${fs * 0.62}px)`;
+      t2.style.top = `calc(${style.y}% + ${fs * num(style.x2Gap, 62) / 100}px)`;
       t2.style.fontFamily = FONTS[style.font] || FONTS.orbitron;
       t2.style.fontWeight = FONT_WEIGHT[style.font] || 400;
       t2.style.letterSpacing = (style.spacing / 100) + "em";
@@ -1682,9 +1685,9 @@
     /* ---------------- estilo ---------------- */
     const styleInputs = {
       color: "stColor", stroke: "stStroke", glow: "stGlow", strokeW: "stStrokeW", glowSize: "stGlowSize",
-      font: "stFont", size: "stSize", x: "stX", y: "stY", spacing: "stSpacing"
+      font: "stFont", size: "stSize", x: "stX", y: "stY", spacing: "stSpacing", x2Size: "stX2Size", x2Gap: "stX2Gap"
     };
-    const labels = { strokeW: "vStrokeW", glowSize: "vGlowSize", size: "vSize", x: "vX", y: "vY", spacing: "vSpacing" };
+    const labels = { strokeW: "vStrokeW", glowSize: "vGlowSize", size: "vSize", x: "vX", y: "vY", spacing: "vSpacing", x2Size: "vX2Size", x2Gap: "vX2Gap" };
     hooks.style = () => {
       for (const [k, id] of Object.entries(styleInputs)) {
         if (document.activeElement !== $(id)) $(id).value = style[k];
