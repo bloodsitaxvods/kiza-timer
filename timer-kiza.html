@@ -42,6 +42,16 @@
   .tmr span { display: block; }
   .tmr .t-back { position: absolute; inset: 0; }
   .tmr .t-front { position: relative; }
+  /* tiempo total del directo, encima del timer principal */
+  .tmr0 { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; line-height: 1;
+    font-variant-numeric: tabular-nums; display: none; }
+  .tmr0.show { display: block; }
+  .tmr0 > span { display: block; }
+  .tmr0 .upl { display: inline-block; font-size: 0.62em; vertical-align: middle; margin-right: 0.5em; letter-spacing: 0.06em; }
+  .tmr0 .upt { display: inline-block; vertical-align: middle; }
+  .tmr0 .t-back { position: absolute; inset: 0; color: #FFFFFF; -webkit-text-stroke: 0.18em #FFFFFF;
+    text-shadow: 0 0 0.2em rgba(0,0,0,.35); }
+  .tmr0 .t-front { position: relative; color: #000000; }
   /* contador del doble tiempo, debajo del timer principal */
   .tmr2 { position: absolute; transform: translate(-50%, 0); white-space: nowrap; line-height: 1;
     font-variant-numeric: tabular-nums; display: none; }
@@ -142,7 +152,7 @@
   button.danger:hover { border-color: var(--danger); }
   button.small { padding: 7px 11px; font-size: 11px; }
 
-  input[type="text"], input[type="number"], select {
+  input[type="text"], input[type="number"], input[type="datetime-local"], select {
     font-family: var(--mono); background: var(--bg); border: 1px solid var(--border); color: var(--text);
     border-radius: 9px; padding: 11px 12px; font-size: 14px; width: 100%; min-width: 0;
   }
@@ -291,6 +301,14 @@
   .anim-btn.paused .i-pause { display: none; }
   .frow .fthumb { cursor: pointer; }
 
+  /* tiempo total */
+  .up-row { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+  .up-clock { font-size: 40px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; min-width: 210px; letter-spacing: .04em; }
+  .up-start { flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 6px; }
+  .up-start .up-lbl { font-size: 11px; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; }
+  .up-start .up-val { font-size: 15px; color: var(--text); }
+  #btnUpShow.on { border-color: var(--accent-2); color: var(--accent-2); background: rgba(0,194,255,.1); }
+
   /* doble tiempo */
   .boost-block { border-color: rgba(255,43,58,.55); background: linear-gradient(180deg, #230b12 0%, var(--panel) 75%); }
   .boost-block > .block-head .title::before { background: var(--boost); box-shadow: 0 0 10px var(--boost); }
@@ -336,6 +354,7 @@
   <div class="preview">
     <div class="stage nobg" id="stage">
       <img class="bg" id="bgImg" alt="">
+      <div class="tmr0" id="tmr0"><span class="t-back"><span class="upl">TIEMPO TOTAL</span><span class="upt">00:00:00</span></span><span class="t-front"><span class="upl">TIEMPO TOTAL</span><span class="upt">00:00:00</span></span></div>
       <div class="tmr" id="tmr"><span class="t-back">00:00:00</span><span class="t-front">00:00:00</span></div>
       <div class="tmr2" id="tmr2"><span class="t-back"><span class="x2l">x2</span><span class="x2t">00:00</span></span><span class="t-front"><span class="x2l">x2</span><span class="x2t">00:00</span></span></div>
     </div>
@@ -431,6 +450,21 @@
       <label class="rcheck"><input type="checkbox" data-bcat="raid"> Raids</label>
       <label class="rcheck"><input type="checkbox" data-bcat="donation"> Donación USD</label>
       <label class="rcheck"><input type="checkbox" data-bcat="donationMxn"> Donación MXN</label>
+    </div>
+  </div>
+
+  <!-- TIEMPO TOTAL -->
+  <div class="block up-block">
+    <div class="block-head">
+      <div class="title">Tiempo total</div>
+      <button class="fit ghost" id="btnUpShow">MOSTRAR EN OVERLAY</button>
+    </div>
+    <div class="up-row">
+      <div class="up-clock" id="upClock">00:00:00</div>
+      <div class="up-start">
+        <span class="up-lbl">Inicio del directo</span>
+        <span class="up-val">17/10/2026 · 5:40 p. m. (hora Perú)</span>
+      </div>
     </div>
   </div>
 
@@ -547,6 +581,8 @@
       <div class="field"><label>Espaciado <b id="vSpacing"></b></label><input type="range" id="stSpacing" min="-10" max="30" step="1"></div>
       <div class="field"><label>Tamaño del x2 <b id="vX2Size"></b>%</label><input type="range" id="stX2Size" min="20" max="150" step="1"></div>
       <div class="field"><label>Separación del x2 <b id="vX2Gap"></b></label><input type="range" id="stX2Gap" min="0" max="200" step="1"></div>
+      <div class="field"><label>Tamaño tiempo total <b id="vUpSize"></b>%</label><input type="range" id="stUpSize" min="20" max="150" step="1"></div>
+      <div class="field"><label>Separación tiempo total <b id="vUpGap"></b></label><input type="range" id="stUpGap" min="0" max="200" step="1"></div>
     </div>
     <div class="row" style="margin-top:16px;">
       <button class="ghost" id="btnStyleReset">Restablecer estilo</button>
@@ -659,7 +695,8 @@
     color: "#FFFFFF", stroke: "#0A1A3A", strokeW: 6,
     glow: "#2F7BFF", glowSize: 18,
     font: "orbitron", size: 12, x: 50, y: 50, spacing: 4,
-    x2Size: 55, x2Gap: 62     // x2: % del tamaño del timer principal y distancia debajo de él
+    x2Size: 55, x2Gap: 62,    // x2: % del tamaño del timer principal y distancia debajo de él
+    upSize: 45, upGap: 62     // tiempo total: % del tamaño y distancia encima del timer principal
   };
   let style = { ...DEFAULT_STYLE };
 
@@ -728,6 +765,15 @@
       t2.style.fontFamily = FONTS[style.font] || FONTS.orbitron;
       t2.style.fontWeight = FONT_WEIGHT[style.font] || 400;
       t2.style.letterSpacing = (style.spacing / 100) + "em";
+    }
+    const t0 = $("tmr0");
+    if (t0) {
+      t0.style.fontSize = (fs * num(style.upSize, 45) / 100) + "px";
+      t0.style.left = style.x + "%";
+      t0.style.top = `calc(${style.y}% - ${fs * num(style.upGap, 62) / 100}px)`;
+      t0.style.fontFamily = FONTS[style.font] || FONTS.orbitron;
+      t0.style.fontWeight = FONT_WEIGHT[style.font] || 400;
+      t0.style.letterSpacing = (style.spacing / 100) + "em";
     }
   }
   new ResizeObserver(fitSize).observe(stage);
@@ -862,6 +908,33 @@
     if (!ircStarted) { ircStarted = true; ircConnect(); }  // no escuchar Twitch sin precios cargados
   });
 
+  /* ================= TIEMPO TOTAL DEL DIRECTO ================= */
+  // Cuenta hacia adelante desde el inicio guardado; no se pausa. Solo se muestra u oculta.
+  const uptimeRef = ref(db, "uptime");      // { visible: bool }  (solo mostrar/ocultar)
+  const UPTIME_START = 1792276800000;       // FIJO: 17/10/2026 17:40 hora Perú (UTC-5)
+  let uptime = { start: UPTIME_START, visible: false };
+  onValue(uptimeRef, (snap) => {
+    const v = snap.val() || {};
+    uptime = { start: UPTIME_START, visible: !!v.visible };
+    if (hooks.uptime) hooks.uptime();
+  });
+  const uptimeMs = () => Math.max(0, now() - uptime.start);
+  function fmtUp(ms) {
+    const t = Math.floor(ms / 1000);
+    const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+    const p = (n) => String(n).padStart(2, "0");
+    return `${p(h)}:${p(m)}:${p(s)}`;
+  }
+  const tmr0 = $("tmr0");
+  const upTimes = tmr0.querySelectorAll(".upt");
+  let lastUp = "";
+  function renderUptime() {
+    tmr0.classList.toggle("show", uptime.visible);
+    if (!uptime.visible) return;
+    const t = fmtUp(uptimeMs());
+    if (t !== lastUp) { lastUp = t; upTimes.forEach((el) => { el.textContent = t; }); }
+  }
+
   /* ================= DOBLE TIEMPO x2 ================= */
   let boost = { isRunning: false, endTime: 0, remainingMs: 0, visible: false, cats: {} };
   onValue(boostRef, (snap) => {
@@ -908,6 +981,7 @@
     setText(fmt(rem));
     if (seekMs == null && animHold == null) updateFrame(false);
     renderBoost();
+    renderUptime();
     // Llegó a 0: se detiene con transacción y con la hora del servidor ya cargada.
     // Así una PC con el reloj adelantado no puede apagar el timer antes de tiempo,
     // y un sub que llega justo en el último segundo no se borra.
@@ -1415,6 +1489,14 @@
       });
     });
 
+    /* ---------------- tiempo total ---------------- */
+    hooks.uptime = () => {
+      $("btnUpShow").classList.toggle("on", uptime.visible);
+      $("btnUpShow").textContent = uptime.visible ? "OCULTAR DEL OVERLAY" : "MOSTRAR EN OVERLAY";
+    };
+    setInterval(() => { $("upClock").textContent = fmtUp(uptimeMs()); }, 250);
+    $("btnUpShow").addEventListener("click", () => update(uptimeRef, { visible: !uptime.visible }));
+
     /* ---------------- doble tiempo x2 ---------------- */
     hooks.boost = () => {
       document.querySelectorAll("[data-bcat]").forEach((c) => { c.checked = !!boost.cats[c.dataset.bcat]; });
@@ -1684,9 +1766,9 @@
     /* ---------------- estilo ---------------- */
     const styleInputs = {
       color: "stColor", stroke: "stStroke", glow: "stGlow", strokeW: "stStrokeW", glowSize: "stGlowSize",
-      font: "stFont", size: "stSize", x: "stX", y: "stY", spacing: "stSpacing", x2Size: "stX2Size", x2Gap: "stX2Gap"
+      font: "stFont", size: "stSize", x: "stX", y: "stY", spacing: "stSpacing", x2Size: "stX2Size", x2Gap: "stX2Gap", upSize: "stUpSize", upGap: "stUpGap"
     };
-    const labels = { strokeW: "vStrokeW", glowSize: "vGlowSize", size: "vSize", x: "vX", y: "vY", spacing: "vSpacing", x2Size: "vX2Size", x2Gap: "vX2Gap" };
+    const labels = { strokeW: "vStrokeW", glowSize: "vGlowSize", size: "vSize", x: "vX", y: "vY", spacing: "vSpacing", x2Size: "vX2Size", x2Gap: "vX2Gap", upSize: "vUpSize", upGap: "vUpGap" };
     hooks.style = () => {
       for (const [k, id] of Object.entries(styleInputs)) {
         if (document.activeElement !== $(id)) $(id).value = style[k];
