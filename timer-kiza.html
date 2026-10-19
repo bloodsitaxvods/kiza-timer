@@ -42,6 +42,8 @@
   .tmr span { display: block; }
   .tmr .t-back { position: absolute; inset: 0; }
   .tmr .t-front { position: relative; }
+  /* los textos siempre por encima de las imágenes del marco */
+  .tmr, .tmr0, .tmr2 { z-index: 5; }
   /* tiempo total del directo, encima del timer principal */
   .tmr0 { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; line-height: 1;
     font-variant-numeric: tabular-nums; display: none; }
@@ -814,7 +816,8 @@
     if (!list.length) { stage.classList.add("nobg"); bgImg.removeAttribute("src"); frames = []; fitSize(); return; }
     list.forEach((f, i) => {
       const el = i === 0 ? bgImg : document.createElement("img");
-      if (i > 0) { el.className = "bg layer off"; el.alt = ""; stage.insertBefore(el, tmr); }
+      // las capas van justo después de la imagen base, antes de TODOS los textos
+      if (i > 0) { el.className = "bg layer off"; el.alt = ""; stage.insertBefore(el, $("tmr0") || tmr); }
       else { el.className = "bg"; }
       if (i === 0) {
         el.onload = () => { stage.classList.remove("nobg"); fitSize(); };
